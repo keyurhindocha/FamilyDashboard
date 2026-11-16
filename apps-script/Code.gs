@@ -691,3 +691,47 @@ function startOfDay_(d) {
   var p = fmt_(d, 'yyyy-M-d').split('-');
   return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
 }
+
+// ---------------------------------------------------------------- debugging helpers
+// Run these from the editor when something isn't showing. They only write to the log.
+
+/** Which calendars can the board see, and what's in the commuter's calendar today and this week? */
+function testCalendars() {
+  Logger.log('Calendars this account can see: ' + CalendarApp.getAllCalendars().map(function (c) { return c.getName(); }).join(' | '));
+  var start = new Date(); start.setHours(0, 0, 0, 0);
+  var end = new Date(start.getTime() + 7 * 864e5);
+  [['owner', CalendarApp.getDefaultCalendar()], ['commuter', findCalendar_(CONFIG.COMMUTER_CALENDAR)],
+   ['family', findCalendar_(CONFIG.FAMILY_CALENDAR)]].forEach(function (pair) {
+    var who = pair[0], cal = pair[1];
+    if (!cal) { Logger.log(who + ': not set or NOT FOUND'); return; }
+    var evs = cal.getEvents(start, end);
+    Logger.log(who + ': "' + cal.getName() + '", ' + evs.length + ' events from midnight today to 7 days ahead');
+    evs.slice(0, 5).forEach(function (e) { Logger.log('   ' + e.getStartTime() + '  ' + (e.getTitle() || '(no title)')); });
+  });
+}
+
+/** Live fuel prices near you, with when each station last changed its price. Takes 30-40 seconds. */
+function testFuel() {
+  var near = nearbyStations_(), byId = {};
+  near.forEach(function (s) { byId[s.id] = s; });
+  Logger.log('Nearby stations known: ' + near.length);
+  var rows = [];
+  fuelBatches_('/api/v1/pfs/fuel-prices').forEach(function (p) {
+    var s = byId[p.node_id];
+    if (!s || !p.fuel_prices) return;
+    p.fuel_prices.forEach(function (f) {
+      if (f.fuel_type !== CONFIG.FUEL_TYPE) return;
+      rows.push({ price: Number(f.price), text: f.price + 'p  ' + s.name + ' (' + (Math.round(s.miles * 10) / 10) + ' mi)  last changed ' + (f.price_last_updated || '?') });
+    });
+  });
+  rows.sort(function (a, b) { return a.price - b.price; });
+  rows.slice(0, 8).forEach(function (r) { Logger.log(r.text); });
+  Logger.log('Board currently shows: ' + JSON.stringify(cached_('fuel', 1800, getDiesel_)));
+}
+
+/** What notes and dinners the board can see right now (skips the board's saved copy). */
+function testNotes() {
+  Logger.log('Todoist token set: ' + !!prop_('TODOIST_TOKEN'));
+  Logger.log('Notes: ' + JSON.stringify(getNotices_()));
+  Logger.log('Dinners: ' + JSON.stringify(getDinners_()));
+}

@@ -23,8 +23,17 @@ The free TransportAPI plan allows 30 calls a day, and the board stops at 25 to l
 **Notes or dinners don't appear**
 Notes are kept for 5 minutes and dinners for 10, and the tablet asks every 2 minutes, so allow about 10 minutes. Check the project names are exactly **Notices** and **Dinners**, and that dinners have **due dates**.
 
+**A partner's calendar events don't show**
+Run **testCalendars**. It lists every calendar your account can see.
+- *Not found:* copy the exact **Calendar ID** from Google Calendar (their calendar → Settings and sharing → Integrate calendar) into `COMMUTER_CALENDAR`. UK accounts are often listed as `@googlemail.com` even when people type `@gmail.com`.
+- *Found, but 0 events:* their events are going into a phone-only calendar (e.g. Samsung Calendar's own one) rather than their Google calendar. When adding an event, pick the calendar marked with their Gmail account.
+- *Events missing from Today:* finished timed events drop off the Today list automatically, so check with something still to come.
+
+**Fuel prices haven't changed for days**
+Run **testFuel**. It shows live prices and when each station last changed its price. Supermarkets often hold a price for several days, so if other stations show recent dates, the feed is fine.
+
 **Something's not showing at all**
-Run **testEverything** in the editor. Each section's problem is listed under `errors`.
+Run **testEverything** in the editor. Each section's problem is listed under `errors`. There are also **testCalendars**, **testFuel**, **testNotes** and **testCommuteAlert** for individual sections.
 
 ## How often things update
 
