@@ -63,10 +63,10 @@ var CONFIG = {
   DAY_OFF_WORDS: ['holiday', 'day off', 'annual leave', 'off work', 'leave'],
 
   // ---- Bins. Example: rubbish and recycling alternate on Fridays, food waste every week.
-  // Peel Region, from the Recollect schedule (peelregionon.recollect.net):
-  // Thursdays. Green bin every week, garbage every other week, yard waste in season.
+  // Thursdays. Peel Region (peelregionon.recollect.net): green bin every week, garbage every
+  // other week, yard waste in season. Circular Materials: recycling on the weeks between (out by 7am).
   BIN_DAY: 4,                                 // collection weekday (Mon=1 ... Sun=7), 0 = off
-  BIN_CYCLE: ['Garbage', ''],                 // bins that take turns, in order ('' = nothing extra that week)
+  BIN_CYCLE: ['Garbage', 'Recycling'],        // bins that take turns, in order ('' = nothing extra that week)
   BIN_CYCLE_START: '2026-11-12',              // a collection day when the FIRST one went out
   BIN_EVERY_WEEK: 'green bin',                // collected every week ('' if none)
   BIN_SEASONAL: [                             // extra pickups between two dates (inclusive)

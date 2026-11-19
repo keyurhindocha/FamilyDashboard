@@ -25,7 +25,7 @@ Free to run: no subscriptions, no home server, no app store.
 | 🕰️ **Clock, date & weather** | Big serif clock, Mississauga weather, and a frost warning on cold mornings. |
 | 📅 **Today & the week ahead** | Pulled from the **Family** calendar (and Keyur's own), colour-coded per person. |
 | 🎂 **Birthdays & anniversaries** | From the *Birthdays and Anniversaries* calendar, with ages worked out from the year: "Nani's birthday · turns 78". |
-| 🗑️ **Bins** | Peel's Thursday schedule: green bin weekly, garbage every other week, yard waste in season. "Bins out tonight" from 5pm the night before. |
+| 🗑️ **Bins** | Thursday pickups: green bin weekly, garbage and recycling on alternating weeks, yard waste in season. "Bins out tonight" from 5pm the night before. |
 | ⛽ **Gas prices** | Today's Mississauga average and **tomorrow's predicted price** from [Gas Wizard](https://gaswizard.ca), with plain advice: *"Up 3¢ tomorrow · fill up today"*. |
 | 🍛 **Dinners** | From the family **meal tracker**. Nothing planned tonight? It suggests a favourite you haven't had in a while: *"How about chole bhature? Last had 6 weeks ago."* |
 | 🏎️ **Formula 1** | Countdown to lights out, with qualifying and sprint times in Toronto time. |
@@ -102,7 +102,7 @@ BIRTHDAY_CALENDAR: '…@group.calendar.google.com',   // Birthdays and Anniversa
 PLACES: [{ name: 'Mississauga', lat: 43.5890, lon: -79.6441 }],
 
 BIN_DAY: 4,                          // Thursday
-BIN_CYCLE: ['Garbage', ''],          // garbage every other week
+BIN_CYCLE: ['Garbage', 'Recycling'], // alternate weeks
 BIN_EVERY_WEEK: 'green bin',
 BIN_SEASONAL: [{ label: 'yard waste', from: '2026-11-01', until: '2026-12-10' }],
 
@@ -115,11 +115,10 @@ Everything is explained in [docs/modules.md](docs/modules.md).
 ## 🗺️ Roadmap
 
 - [x] Family & birthday calendars, Toronto time
-- [x] Peel bin schedule with seasonal yard waste
+- [x] Peel + Circular Materials bin schedule, with seasonal yard waste
 - [x] Gas prices with tomorrow's prediction
 - [x] Dinners and ideas from the meal tracker
 - [x] Old-iPad support and 4:3 layout
-- [ ] Blue box recycling day
 - [ ] Kids' chore chart
 - [ ] Photo slideshow from a Google Drive folder
 - [ ] Own name and colour for each family member
