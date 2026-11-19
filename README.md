@@ -1,72 +1,136 @@
-# Family Dashboard
+<div align="center">
 
-A free, always-on kitchen board for an old iPad or Android tablet, set up for a family in Mississauga, Ontario. It shows what the household needs at a glance: calendars, birthdays, the commute, bins, gas prices, notes and dinners. No subscriptions, no home server.
+# 🏡 Family Dashboard
 
-Based on [stewie1308-ui/FamilyDashboard](https://github.com/stewie1308-ui/FamilyDashboard), with the UK-only parts replaced by Canadian ones.
+**An always-on kitchen board for our family in Mississauga, running on an old iPad.**
 
-![Evening view](screenshots/evening.png)
+Calendars, birthdays, bins, gas prices, dinners and the F1 countdown, all in one place.<br>
+Free to run: no subscriptions, no home server, no app store.
 
-| Morning with a route alert | Night mode |
+![Platform](https://img.shields.io/badge/runs_on-old_iPad_·_Android_tablet-1C1A2E?style=flat-square)
+![Backend](https://img.shields.io/badge/backend-Google_Apps_Script-C9B37E?style=flat-square)
+![Cost](https://img.shields.io/badge/cost-$0%2Fmonth-2E7D4F?style=flat-square)
+![Licence](https://img.shields.io/badge/licence-MIT-A8326E?style=flat-square)
+
+![The board on a Wednesday evening](screenshots/evening.png)
+
+</div>
+
+---
+
+## ✨ What's on the board
+
+| | |
 |---|---|
-| ![Route alert](screenshots/alert.png) | ![Night](screenshots/night.png) |
+| 🕰️ **Clock, date & weather** | Big serif clock, Mississauga weather, and a frost warning on cold mornings. |
+| 📅 **Today & the week ahead** | Pulled from the **Family** calendar (and Keyur's own), colour-coded per person. |
+| 🎂 **Birthdays & anniversaries** | From the *Birthdays and Anniversaries* calendar, with ages worked out from the year: "Nani's birthday · turns 78". |
+| 🗑️ **Bins** | Peel's Thursday schedule: green bin weekly, garbage every other week, yard waste in season. "Bins out tonight" from 5pm the night before. |
+| ⛽ **Gas prices** | Today's Mississauga average and **tomorrow's predicted price** from [Gas Wizard](https://gaswizard.ca), with plain advice: *"Up 3¢ tomorrow · fill up today"*. |
+| 🍛 **Dinners** | From the family **meal tracker**. Nothing planned tonight? It suggests a favourite you haven't had in a while: *"How about chole bhature? Last had 6 weeks ago."* |
+| 🏎️ **Formula 1** | Countdown to lights out, with qualifying and sprint times in Toronto time. |
+| 📝 **Notes** | A shared Todoist list anyone can add to from their phone. |
+| 🌙 **Night mode** | 23:00–06:30: a dim starry clock with tomorrow's essentials (bins, frost, first event, gas, birthdays). |
 
-## What it shows
+Every section is optional. Anything that isn't set up simply doesn't appear.
 
-- **Clock, date and weather** for up to two places, with frost warnings
-- **Today and the week ahead** from Google Calendar, colour-coded per person
-- **Birthdays and anniversaries** coming up, with ages ("turns 71")
-- **Commute:** live drive time and a leave-by time (adds extra minutes when it's frosty)
-- **Route alerts:** a push notification **only** when a crash or closure means a different route is quicker, with a one-tap Google Maps link. Morning and evening.
-- **Bins:** "bins out tonight", worked out from your collection pattern, so it stays out of your calendars
-- **Gas prices:** today's Mississauga average and tomorrow's predicted price from Gas Wizard, with "fill up today" or "wait" advice
-- **Formula 1 countdown**
-- **Dinners** from the family meal tracker, with a "haven't had it in a while" idea on unplanned nights
-- **Notes** from a shared Todoist project, so everyone can add them from their phones
-- **Night mode** (23:00–06:30): dimmed clock, moon phase, and a "bins / frost / tomorrow" line
+## 📸 A day on the board
 
-Every section is optional. Anything you don't set up simply doesn't appear.
+<table>
+<tr>
+<td width="50%"><img src="screenshots/ipad-morning.png" alt="Thursday morning on the iPad"></td>
+<td width="50%"><img src="screenshots/night.png" alt="Night mode"></td>
+</tr>
+<tr>
+<td><b>Thursday 7:38am, iPad (4:3).</b> A birthday, collection day, tonight's plans, and a dinner idea because nothing's planned yet.</td>
+<td><b>Wednesday 11:30pm, night mode.</b> Bins out, frost by morning, gas going up, and whose birthday it is tomorrow.</td>
+</tr>
+</table>
 
-## How it works
+## 🧱 How it works
 
+```mermaid
+flowchart LR
+    iPad["📱 Old iPad<br/>Safari · Guided Access"] -- "every 2 min" --> Script["⚙️ Google Apps Script<br/>(our Google account, free)"]
+    Script --> Cal["📅 Google Calendar<br/>Family · Birthdays"]
+    Script --> Weather["🌤️ Open-Meteo"]
+    Script --> Gas["⛽ Gas Wizard"]
+    Script --> Meals["🍛 Meal tracker<br/>(Supabase)"]
+    Script --> F1["🏎️ Jolpica F1"]
+    Script --> Todo["📝 Todoist"]
 ```
-iPad (Safari, Guided Access) or Android tablet (Fully Kiosk Browser)
-   └─ board page (web/index.html, on GitHub Pages or Netlify)
-         └─ every 2 min asks for JSON ─► Google Apps Script (your account, free)
-                                            ├─ Google Calendar, Maps (traffic), Tasks
-                                            ├─ Open-Meteo (weather), Jolpica (F1)
-                                            ├─ Gas Wizard (gas prices), Todoist (notes)
-                                            ├─ meal tracker on Supabase (dinners)
-                                            └─ ntfy (push alerts)
+
+- **The board** is a single HTML page ([`web/index.html`](web/index.html)) laid out at 1280×800, or 1280×960 on a 4:3 iPad, and scaled to fit the screen.
+- **The data** comes from a small Google Apps Script ([`apps-script/`](apps-script)) that runs in our own Google account. It gathers every feed, caches it, and hands the board one JSON object. If one feed fails, the rest keep working.
+- **Secrets** (Supabase key, Todoist token) live in Apps Script's **Script properties**, never in this repo.
+
+## 🍎 Built for an old iPad
+
+The tablet is a retired iPad that stays on in the kitchen all the time, so the page is careful about old Safari:
+
+- Works on **iOS 10.3 and newer**. Spacing that old Safari can't do is replaced with margins, it uses `XMLHttpRequest` instead of `fetch`, and it falls back to the iPad's own clock if time zones aren't supported.
+- On 4:3 screens it **grows taller** instead of leaving black bars, and the week panel gets the extra room.
+- Reloads itself at 4am every night to clear memory.
+
+**Kiosk setup:** open the board in Safari → Share → **Add to Home Screen**. Then go to Settings → Display → **Auto-Lock: Never**, and turn on Settings → Accessibility → **Guided Access** (triple-click the Home button to lock the board on screen).
+
+## 🚀 Setting it up
+
+1. **Copy the script:** create a project at [script.google.com](https://script.google.com) and add the four files from [`apps-script/`](apps-script).
+2. **Edit [`Config.gs`](apps-script/Config.gs):** people and colours, calendars, weather place, bin schedule, gas city and type. It's the only file you need to touch.
+3. **Add secrets** in Project Settings → Script properties (only for the sections you want):
+
+   | Property | For |
+   |---|---|
+   | `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | dinners from the meal tracker |
+   | `TODOIST_TOKEN` | shared notes |
+   | `NTFY_TOPIC`, `NTFY_TOKEN` | commute route alerts |
+
+4. **Run `setup`**, then **Deploy → New deployment → Web app** (Execute as: *Me*, Who has access: *Anyone*).
+5. **Open the board link** on the iPad. The repo is private, so use the Apps Script link directly or a private Netlify Drop copy ([setup step 4](docs/setup.md#4-host-the-board-page)).
+
+Handy checks in the Apps Script editor: `testEverything`, `testCalendars`, `testBirthdays`, `testNotes`.
+
+> **Changed the board page?** Edit `web/index.html`, then run `python3 tools/sync-apps-script-page.py` to update `apps-script/Index.html` to match.
+
+## 🛠️ Configuration at a glance
+
+```js
+TIMEZONE: 'America/Toronto',
+FAMILY_CALENDAR: 'Family',
+BIRTHDAY_CALENDAR: '…@group.calendar.google.com',   // Birthdays and Anniversaries
+PLACES: [{ name: 'Mississauga', lat: 43.5890, lon: -79.6441 }],
+
+BIN_DAY: 4,                          // Thursday
+BIN_CYCLE: ['Garbage', ''],          // garbage every other week
+BIN_EVERY_WEEK: 'green bin',
+BIN_SEASONAL: [{ label: 'yard waste', from: '2026-11-01', until: '2026-12-10' }],
+
+GAS_CITY: 'mississauga',  GAS_TYPE: 'Regular',   // or 'Premium' / 'Diesel'
+MEAL_SUGGEST: true,                  // "haven't had it in a while" ideas
 ```
 
-Everything runs on free tiers. Your keys stay in your own Apps Script **Script properties**, never in this repo.
+Everything is explained in [docs/modules.md](docs/modules.md).
 
-## Quick start (about 15 minutes for the basics)
+## 🗺️ Roadmap
 
-1. **Copy the script:** create a new project at [script.google.com](https://script.google.com) and add the four files from [`apps-script/`](apps-script).
-2. **Edit `Config.gs`:** names, colours, weather places, bin day. Leave anything you don't want empty.
-3. **Run `setup`**, then **Deploy → New deployment → Web app** (Execute as: Me, Who has access: Anyone).
-4. **Host the page:** see [docs/setup.md](docs/setup.md#4-host-the-board-page).
-5. **Set up the tablet:** see [docs/tablet.md](docs/tablet.md).
+- [x] Family & birthday calendars, Toronto time
+- [x] Peel bin schedule with seasonal yard waste
+- [x] Gas prices with tomorrow's prediction
+- [x] Dinners and ideas from the meal tracker
+- [x] Old-iPad support and 4:3 layout
+- [ ] Blue box recycling day
+- [ ] Kids' chore chart
+- [ ] Photo slideshow from a Google Drive folder
+- [ ] Own name and colour for each family member
 
-The full walkthrough is in [docs/setup.md](docs/setup.md). Optional extras (route alerts, gas prices, birthdays, notes and dinners) are in [docs/modules.md](docs/modules.md).
+## 📚 Docs
 
-## Make it yours
+[Setup](docs/setup.md) · [Tablet & kiosk](docs/tablet.md) · [Modules](docs/modules.md) · [Design](docs/design.md) · [Troubleshooting](docs/troubleshooting.md)
 
-The look is a dark "enchanted library" theme: parchment panels, gold details and a starry night mode. You can change the colours, icons and artwork, with or without an AI image tool. See [docs/design.md](docs/design.md).
+## 🙏 Credits
 
-## Docs
+Built on the lovely [stewie1308-ui/FamilyDashboard](https://github.com/stewie1308-ui/FamilyDashboard), including its "enchanted library" design and Higgsfield artwork. The UK-only parts (bus times, UK fuel prices) were swapped for Canadian ones.
+Data from [Open-Meteo](https://open-meteo.com), [Gas Wizard](https://gaswizard.ca), [Jolpica F1](https://github.com/jolpica/jolpica-f1), Google Calendar and Todoist.
 
-- [Setup](docs/setup.md)
-- [Tablet and kiosk](docs/tablet.md)
-- [Optional modules](docs/modules.md)
-- [Customising the design](docs/design.md)
-- [Troubleshooting](docs/troubleshooting.md)
-
-## Tested on
-
-The original was tested on a Lenovo Tab M10 HD (Android 10) with Fully Kiosk Browser. This version adds support for older iPads (Safari on iOS 10.3 and newer, 4:3 layout); see [Old iPads](docs/modules.md#old-ipads).
-
-## Licence
-
-MIT. See [LICENSE](LICENSE).
+MIT licence. See [LICENSE](LICENSE).

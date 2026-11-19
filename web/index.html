@@ -84,7 +84,7 @@
       <span id="nClock" class="cz" style="font-size: 190px; line-height: 1; font-weight: 500; color: #8C86B0"></span>
       <span id="nMoon" class="row" style="gap: 10px; font-size: 18px; font-style: italic; color: #8C86B0"></span>
     </div>
-    <div id="nInfo" style="position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); display: flex; gap: 36px; align-items: center; padding: 14px 28px; border: 1px solid #2E2A48; border-radius: 999px; font-size: 18px; white-space: nowrap"></div>
+    <div id="nInfo" style="position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 36px; align-items: center; width: max-content; max-width: 1120px; padding: 14px 32px; border: 1px solid #2E2A48; border-radius: 32px; font-size: 18px"></div>
     <span id="nBattery" style="position: absolute; right: 28px; bottom: 24px; font-size: 14px; color: #8C86B0"></span>
   </div>
 </div>
@@ -470,12 +470,12 @@ function renderNight(now, p) {
   var adv = DATA && gasAdvice(DATA.gas);
   if (adv && DATA.gas.tomorrow.change >= 2 && minutesOfDay(now) >= NIGHT_FROM) info.push(svg('fuel', '#A9A2C6', 18) + '<span>Gas ' + esc(adv.text.toLowerCase()) + '</span>');
   var bTomorrow = DATA && DATA.birthdays ? bdaysOn(isoKey(now + (minutesOfDay(now) >= NIGHT_FROM ? 864e5 : 0))) : [];
-  if (bTomorrow.length) info.push(svg('cake', '#A9A2C6', 18) + '<span>' + esc(bTomorrow[0].title) + (bTomorrow.length > 1 ? ' +' + (bTomorrow.length - 1) : '') + '</span>');
-  $('nInfo').innerHTML = info.map(function (h) { return '<span class="row" style="gap: 8px">' + h + '</span>'; }).join('');
+  if (bTomorrow.length) info.push(svg('cake', '#A9A2C6', 18) + '<span>' + esc(bTomorrow[0].title) + ' tomorrow' + (bTomorrow.length > 1 ? ' (+' + (bTomorrow.length - 1) + ' more)' : '') + '</span>');
+  $('nInfo').innerHTML = info.map(function (h) { return '<span class="row" style="gap: 8px; white-space: nowrap">' + h + '</span>'; }).join('');
   $('nInfo').style.display = info.length ? 'flex' : 'none';
 }
 function nextMorningLow(w, now) {
-  var target = dayKey(now + (minutesOfDay(now) >= NIGHT_FROM ? 864e5 : 0));
+  var target = isoKey(now + (minutesOfDay(now) >= NIGHT_FROM ? 864e5 : 0));   // hourly times are ISO (2026-11-26T07:00)
   var low = null, h = w.hourly || { time: [], temp: [] };
   for (var i = 0; i < h.time.length; i++) {
     if (h.time[i].indexOf(target) === 0) {
