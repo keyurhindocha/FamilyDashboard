@@ -1,26 +1,23 @@
 <div align="center">
-
-# 🏡 Family Dashboard
-
-**An always-on kitchen board for a family in the GTA, running on an old iPad.**
-
-Calendars, birthdays, bins, gas prices, dinners and the F1 countdown, all in one place.<br>
-Free to run: no subscriptions, no home server, no app store.
-
-![Platform](https://img.shields.io/badge/runs_on-old_iPad_·_Android_tablet-1C1A2E?style=flat-square)
-![Backend](https://img.shields.io/badge/backend-Google_Apps_Script-C9B37E?style=flat-square)
-![Cost](https://img.shields.io/badge/cost-$0%2Fmonth-2E7D4F?style=flat-square)
-![Licence](https://img.shields.io/badge/licence-MIT-A8326E?style=flat-square)
-
-![The board on a Wednesday evening](screenshots/evening.png)
-
+  <h1>🏡 Family Dashboard</h1>
+  <p><strong>An always-on kitchen board for a family in the GTA, running on an old iPad.</strong></p>
+  <p>Calendars, birthdays, bins, gas prices, dinners and the F1 countdown, all in one place.<br>
+  Free to run: no subscriptions, no home server, no app store.</p>
+  <p>
+    <img alt="Runs on an old iPad or Android tablet" src="https://img.shields.io/badge/runs_on-old_iPad_·_Android_tablet-1C1A2E?style=flat-square">
+    <img alt="Backend: Google Apps Script" src="https://img.shields.io/badge/backend-Google_Apps_Script-C9B37E?style=flat-square">
+    <img alt="Cost: $0 a month" src="https://img.shields.io/badge/cost-$0%2Fmonth-2E7D4F?style=flat-square">
+    <img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-A8326E?style=flat-square">
+  </p>
+  <p><a href="https://keyurhindocha.github.io/FamilyDashboard/"><strong>Open the board →</strong></a> <sub>(asks for a board link; no data without one)</sub></p>
+  <img alt="The board on a Wednesday evening" src="screenshots/evening.png">
 </div>
 
 ---
 
 ## ✨ What's on the board
 
-| | |
+| Section | What it shows |
 |---|---|
 | 🕰️ **Clock, date & weather** | Big serif clock, Mississauga weather, and a frost warning on cold mornings. |
 | 📅 **Today & the week ahead** | Pulled from the shared **Family** calendar (and a parent's own), colour-coded per person. |
