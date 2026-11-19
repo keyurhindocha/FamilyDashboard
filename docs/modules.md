@@ -73,3 +73,27 @@ The board says "bins out tonight" from 5pm the evening before, and shows them on
 ## F1 countdown
 
 No setup. Uses the free Jolpica F1 API. Turn it off with `MODULES.f1: false`.
+
+## Birthdays and anniversaries
+
+**Config.gs:** `BIRTHDAY_CALENDAR` (name or ID), `BIRTHDAY_DAYS` (default 14).
+
+Today's birthdays go at the top of the Today list, and the rest of the week shows them as pink chips. A year in brackets in the title becomes an age, so "Jane Doe's birthday (1985)" shows "turns 41", and anything after ` · ` is dropped. Run **testBirthdays** to check.
+
+## Dinners from the meal tracker
+
+Reads `meal_entries` (type `dinner`) from the meal tracker's Supabase project. When it's set up, it replaces the Todoist dinners.
+
+1. Supabase → Project Settings → API: copy the **Project URL** and the **service_role** key.
+2. Script properties: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`. The service key can read every row, so keep it only in Script properties.
+3. Config.gs: `MEAL_USER_ID` = your user id (Supabase → Authentication → Users), so only your meals are read.
+4. Plan a dinner by logging it in the meal tracker on a future date. It shows in the week view and as tonight's dinner.
+5. `MEAL_SUGGEST`: when tonight has no dinner, the board suggests a favourite (eaten 3+ times in the last 6 months) you haven't had for at least two weeks.
+
+Run **testNotes** to see what the board reads.
+
+## Old iPads
+
+The board works in Safari on iOS 10.3 and newer. On older Safari it swaps flexbox spacing for margins and falls back to the iPad's own clock if time zones aren't supported. On a 4:3 screen it lays out at 1280×960 instead of leaving black bars.
+
+Kiosk setup on iPad: open the board in Safari → Share → **Add to Home Screen**, then Settings → Display → **Auto-Lock: Never**, and Settings → Accessibility → **Guided Access** on (triple-click the Home button inside the board to lock it there).

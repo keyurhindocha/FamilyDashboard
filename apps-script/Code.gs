@@ -35,7 +35,7 @@ function doGet(e) {
 function getBoardData(key) {
   if (key !== prop_('BOARD_KEY')) throw new Error('Not allowed');
   var now = new Date();
-  var out = { now: now.getTime(), people: PEOPLE, errors: {} };
+  var out = { now: now.getTime(), people: PEOPLE, tz: CONFIG.TIMEZONE, errors: {} };
   var on = function (m) { return !CONFIG.MODULES || CONFIG.MODULES[m] !== false; };
   out.show = CONFIG.MODULES || {};
   out.busStop = CONFIG.BUS_STOP_NAME || '';
@@ -49,6 +49,14 @@ function getBoardData(key) {
   section_(out, 'diesel', function () { return on('fuel') ? cached_('fuel', 1800, getDiesel_) : null; });
   section_(out, 'notices', function () { return on('notices') ? cached_('notices', 300, getNotices_) : []; });
   section_(out, 'dinners', function () { return on('dinners') ? cached_('dinners', 600, getDinners_) : {}; });
+  section_(out, 'birthdays', function () { return on('birthdays') ? cached_('bdays', 3600, getBirthdays_) : []; });
+  section_(out, 'dinnerIdea', function () { return on('dinners') && CONFIG.MEAL_SUGGEST ? cached_('dinnerIdea', 21600, getDinnerIdea_) : null; });
+  // Who appears in the legend: only people whose calendar is actually on the board.
+  out.legend = [];
+  if (CONFIG.INCLUDE_OWNER_CALENDAR !== false) out.legend.push('owner');
+  if (CONFIG.COMMUTER_CALENDAR) out.legend.push('commuter');
+  if (CONFIG.FAMILY_CALENDAR) out.legend.push('family');
+  if (out.birthdays && out.birthdays.length) out.legend.push('birthday');
   return out;
 }
 
@@ -73,7 +81,7 @@ function getCalendar_() {
       });
     });
   }
-  add(CalendarApp.getDefaultCalendar(), 'owner');
+  if (CONFIG.INCLUDE_OWNER_CALENDAR !== false) add(CalendarApp.getDefaultCalendar(), 'owner');
   add(findCalendar_(CONFIG.COMMUTER_CALENDAR), 'commuter');
   add(findCalendar_(CONFIG.FAMILY_CALENDAR), 'family');
   events.sort(function (a, b) { return a.start - b.start; });
@@ -155,7 +163,7 @@ function getWeather_() {
       '&current=temperature_2m,weather_code,is_day' +
       '&hourly=temperature_2m' +
       '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset' +
-      '&timezone=Europe%2FLondon&forecast_days=2';
+      '&timezone=' + encodeURIComponent(CONFIG.TIMEZONE) + '&forecast_days=2';
     var j = JSON.parse(UrlFetchApp.fetch(url).getContentText());
     return {
       place: p.name,
@@ -195,7 +203,7 @@ function routes_(from, to, usualRoads) {
     .setMode(Maps.DirectionFinder.Mode.DRIVING)
     .setDepart(new Date(Date.now() + 60000))
     .setAlternatives(true)
-    .setRegion('uk')
+    .setRegion(CONFIG.MAPS_REGION || 'uk')
     .getDirections();
   return pickRoutes_(res.routes || [], usualRoads);
 }
@@ -576,7 +584,7 @@ function homeLatLng_() {
   if (raw) return JSON.parse(raw);
   var v;
   if (CONFIG.HOME) {
-    var loc = Maps.newGeocoder().setRegion('uk').geocode(CONFIG.HOME).results[0].geometry.location;
+    var loc = Maps.newGeocoder().setRegion(CONFIG.MAPS_REGION || 'uk').geocode(CONFIG.HOME).results[0].geometry.location;
     v = { lat: loc.lat, lng: loc.lng };
   } else {
     v = { lat: CONFIG.PLACES[0].lat, lng: CONFIG.PLACES[0].lon };   // no HOME: use the first weather place
@@ -609,8 +617,95 @@ function getNotices_() {
   return items.map(function (t) { return t.title; }).filter(String);
 }
 
-/** Dinners: tasks in the Todoist project "Dinners", each due on the day it's for. Returns {'2026-11-19': 'Fajitas'}. */
+// ---------------------------------------------------------------- birthdays
+/**
+ * Birthdays and anniversaries for the next BIRTHDAY_DAYS days.
+ * Titles look like "Jane Doe's birthday (1985) · Tag": the year in brackets
+ * becomes an age ("turns 41") and the tag after " · " is dropped.
+ */
+function getBirthdays_() {
+  var cal = findCalendar_(CONFIG.BIRTHDAY_CALENDAR);
+  if (!cal) return [];
+  var start = startOfDay_(new Date());
+  var end = new Date(start.getTime() + (CONFIG.BIRTHDAY_DAYS || 14) * 864e5);
+  return cal.getEvents(start, end).map(function (ev) {
+    var day = fmt_(ev.getStartTime(), 'yyyy-MM-dd');
+    var b = tidyBirthday_(ev.getTitle(), Number(day.slice(0, 4)));
+    b.date = day;
+    return b;
+  });
+}
+
+/** Pure: "Jane Doe's birthday (1985) · Rogers" in 2026 -> {title: "Jane Doe's birthday", years: 41, kind: 'birthday'}. */
+function tidyBirthday_(title, thisYear) {
+  var t = String(title || '').split(' · ')[0].trim();
+  var years = null, m = t.match(/\s*\((\d{4})\)\s*$/);
+  if (m) { years = thisYear - Number(m[1]); t = t.slice(0, m.index).trim(); }
+  var lower = t.toLowerCase();
+  var kind = lower.indexOf('anniversary') !== -1 ? 'anniversary' : lower.indexOf('remembrance') !== -1 ? 'remembrance' : 'birthday';
+  return { title: t, years: years > 0 ? years : null, kind: kind };
+}
+
+// ---------------------------------------------------------------- meal tracker
+/** GET rows from the meal tracker's Supabase table (service key stays in Script properties). */
+function mealRows_(query) {
+  var url = prop_('SUPABASE_URL'), key = prop_('SUPABASE_SERVICE_KEY');
+  if (!url || !key) return null;
+  var q = 'select=date,name&type=eq.dinner' + (CONFIG.MEAL_USER_ID ? '&user_id=eq.' + encodeURIComponent(CONFIG.MEAL_USER_ID) : '') + '&' + query;
+  var res = UrlFetchApp.fetch(url.replace(/\/$/, '') + '/rest/v1/meal_entries?' + q, {
+    headers: { apikey: key, Authorization: 'Bearer ' + key }, muteHttpExceptions: true
+  });
+  if (res.getResponseCode() >= 300) throw new Error('Meal tracker HTTP ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 200));
+  return JSON.parse(res.getContentText());
+}
+
+/** Dinners for today and the next 7 days from the meal tracker: {'2026-11-19': 'Pav bhaji'}. */
+function mealTrackerDinners_() {
+  var now = new Date();
+  var rows = mealRows_('date=gte.' + fmt_(now, 'yyyy-MM-dd') + '&date=lte.' + fmt_(new Date(now.getTime() + 7 * 864e5), 'yyyy-MM-dd'));
+  if (!rows) return null;
+  var out = {};
+  rows.forEach(function (r) { if (r.date && r.name) out[r.date] = r.name; });
+  return out;
+}
+
+/**
+ * A favourite dinner you haven't had in a while, from the last 180 days of the meal tracker:
+ * eaten at least 3 times, and the longest gap since you last had it.
+ */
+function getDinnerIdea_() {
+  var now = new Date();
+  var rows = mealRows_('date=gte.' + fmt_(new Date(now.getTime() - 180 * 864e5), 'yyyy-MM-dd') + '&date=lte.' + fmt_(now, 'yyyy-MM-dd'));
+  return rows ? dinnerIdea_(rows, fmt_(now, 'yyyy-MM-dd')) : null;
+}
+
+/** Pure: pick the favourite (3+ times) with the most days since it was last eaten (at least 14). */
+function dinnerIdea_(rows, todayStr) {
+  var seen = {};
+  rows.forEach(function (r) {
+    var k = String(r.name || '').trim().toLowerCase();
+    if (!k) return;
+    var s = seen[k] || (seen[k] = { name: String(r.name).trim(), count: 0, last: '' });
+    s.count++;
+    if (r.date > s.last) s.last = r.date;
+  });
+  var best = null, today = parseDate_(todayStr).getTime();
+  Object.keys(seen).forEach(function (k) {
+    var s = seen[k];
+    if (s.count < 3) return;
+    s.daysAgo = Math.round((today - parseDate_(s.last).getTime()) / 864e5);
+    if (s.daysAgo >= 14 && (!best || s.daysAgo > best.daysAgo)) best = s;
+  });
+  return best ? { name: best.name, daysAgo: best.daysAgo, count: best.count } : null;
+}
+
+/**
+ * Dinners: from the meal tracker when SUPABASE_URL is set, otherwise tasks in the
+ * Todoist project "Dinners", each due on the day it's for. Returns {'2026-11-19': 'Fajitas'}.
+ */
 function getDinners_() {
+  var fromTracker = mealTrackerDinners_();
+  if (fromTracker) return fromTracker;
   if (!prop_('TODOIST_TOKEN')) return {};
   var out = {};
   todoistTasks_('Dinners', 'TODOIST_DINNERS_ID').forEach(function (t) {
@@ -687,7 +782,7 @@ function fmt_(d, pattern) { return Utilities.formatDate(d, CONFIG.TIMEZONE, patt
 function parseDate_(s) { var p = s.split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2], 12)); }
 function isoDay_(d) { var n = Number(Utilities.formatDate(d, CONFIG.TIMEZONE, 'u')); return n; }
 function startOfDay_(d) {
-  // The project time zone is Europe/London (appsscript.json), so this is local midnight.
+  // The project time zone (appsscript.json) matches CONFIG.TIMEZONE, so this is local midnight.
   var p = fmt_(d, 'yyyy-M-d').split('-');
   return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
 }
@@ -734,4 +829,11 @@ function testNotes() {
   Logger.log('Todoist token set: ' + !!prop_('TODOIST_TOKEN'));
   Logger.log('Notes: ' + JSON.stringify(getNotices_()));
   Logger.log('Dinners: ' + JSON.stringify(getDinners_()));
+  Logger.log('Dinner idea: ' + JSON.stringify(getDinnerIdea_()));
+}
+
+/** Birthdays and anniversaries the board will show. */
+function testBirthdays() {
+  Logger.log('Birthday calendar found: ' + !!findCalendar_(CONFIG.BIRTHDAY_CALENDAR));
+  Logger.log(JSON.stringify(getBirthdays_(), null, 2));
 }

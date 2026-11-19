@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en-GB">
+<html lang="en-CA">
 <head>
-<base target="_top">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<base target="_top">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:wght@400;500;600&display=swap">
 <style>
   html, body { margin: 0; height: 100%; background: #1C1A2E; overflow: hidden; }
@@ -25,7 +26,7 @@
   .ev .w { font-size: 15px; color: #5C4A33; }
   .ev .time { font-family: Cinzel, serif; font-size: 20px; }
   .chip { display: inline-flex; gap: 8px; align-items: center; padding: 5px 12px 5px 8px; border-radius: 999px; font-size: 17px; margin: 3px 8px 3px 0; }
-  .chip .ct { color: #5C4A33; }
+  .chip .ct { color: #5C4A33; white-space: nowrap; }
   .chip .cn { font-weight: 500; }
   .wk { display: flex; gap: 16px; align-items: center; padding: 6px 0; border-top: 1px solid #D8C9A6; min-height: 40px; }
   .wk .d { width: 76px; flex: none; display: flex; align-items: baseline; gap: 8px; }
@@ -33,7 +34,7 @@
   .wk .dn { margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px; font-style: italic; font-size: 17px; color: #6B5636; padding-left: 12px; max-width: 230px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wk .num { font-family: Cinzel, serif; font-size: 22px; font-weight: 700; }
   .hidden { display: none !important; }
-  #night { position: absolute; inset: 0; width: 1280px; height: 800px; background: #0E0C1C; color: #A9A2C6; overflow: hidden; }
+  #night { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; background: #0E0C1C; color: #A9A2C6; overflow: hidden; }
   .star { position: absolute; border-radius: 999px; animation: tw 6s ease-in-out infinite; }
   @keyframes tw { 0%, 100% { opacity: .25 } 50% { opacity: .85 } }
 </style>
@@ -94,12 +95,13 @@
 <script>
 var BOARD_KEY = '<?= boardKey ?>';
 var API_URL = '';
+var TZ = 'America/Toronto';   // must match CONFIG.TIMEZONE in Config.gs
 var NIGHT_FROM = 23 * 60, NIGHT_TO = 6 * 60 + 30;   // night mode 23:00–06:30
 var REFRESH_MS = 120000;
 
 // Background artwork (made with Higgsfield, see docs/design.md). Swap any of these for your own:
 // point ASSET_BASE at your own copy, or replace a single URL. Leave one '' to use plain colours.
-var ASSET_BASE = 'https://cdn.jsdelivr.net/gh/stewie1308-ui/FamilyDashboard@main/assets/art/';
+var ASSET_BASE = 'https://cdn.jsdelivr.net/gh/keyurhindocha/FamilyDashboard@main/assets/art/';
 var ART = {
   parchment: ASSET_BASE + 'parchment.png',       // the cream panels
   nightSky: ASSET_BASE + 'night-sky.png',        // night mode
@@ -128,7 +130,8 @@ var ICONS = {
   frost: 'M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9M10 4l2 2 2-2M10 20l2-2 2 2',
   bus: 'M5 17V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v11zM5 12h14M8 17v2M16 17v2M8 14.5h.01M16 14.5h.01',
   fuel: 'M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16zM3 21h12M6 9h6M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3',
-  alert: 'M12 3l10 18H2zM12 10v5M12 18h.01'
+  alert: 'M12 3l10 18H2zM12 10v5M12 18h.01',
+  cake: 'M4 21h16M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M5 16c1.5 1 3 1 4.5 0s3-1 4.5 0 3 1 4.5 0M12 12V8M12 4.5c.8 1 .8 1.8 0 2.5c-.8-.7-.8-1.5 0-2.5z'
 };
 
 function svg(name, color, size, sw) {
@@ -146,21 +149,33 @@ function svgFallback(n, c, s) { return svg(n, c, s); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function $(id) { return document.getElementById(id); }
 
-// ------------------------------------------------------------ time helpers (London)
-function parts(ms) {
-  var f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'long', day: 'numeric', month: 'long',
-    year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: false });
-  var o = {};
-  f.formatToParts(new Date(ms)).forEach(function (p) { o[p.type] = p.value; });
-  o.h = Number(o.hour) % 24; o.m = Number(o.minute);
-  return o;
+// ------------------------------------------------------------ time helpers (TZ)
+// Old iPads: Safari before iOS 11 has no formatToParts, and iOS 9 can't do other time zones.
+// The board sits in the same time zone as TZ, so the device clock is a safe fallback.
+var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+var TZ_OK = (function () {
+  try { new Intl.DateTimeFormat('en-GB', { timeZone: TZ }).format(new Date()); return true; } catch (e) { return false; }
+})();
+function shifted(ms) {
+  // A Date whose local fields read as wall-clock time in TZ.
+  if (!TZ_OK) return new Date(ms);
+  var s = new Date(ms).toLocaleString('en-US', { timeZone: TZ, hour12: false, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+  var m = s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+)/);
+  return m ? new Date(+m[3], +m[1] - 1, +m[2], +m[4] % 24, +m[5]) : new Date(ms);
 }
+function parts(ms) {
+  var d = shifted(ms);
+  return { weekday: DAYS[d.getDay()], day: String(d.getDate()), month: MONTHS[d.getMonth()], year: String(d.getFullYear()),
+           mon: d.getMonth() + 1, h: d.getHours(), m: d.getMinutes() };
+}
+function pad(n) { return (n < 10 ? '0' : '') + n; }
 function dayKey(ms) { var p = parts(ms); return p.year + '-' + p.month + '-' + p.day; }
-function isoKey(ms) { return new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); }
+function isoKey(ms) { var p = parts(ms); return p.year + '-' + pad(p.mon) + '-' + pad(+p.day); }
 function hm(ms) { var p = parts(ms); return p.h + ':' + (p.m < 10 ? '0' : '') + p.m; }
 function short(ms) {
-  return new Date(ms).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short',
-    hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '');
+  var p = parts(ms);
+  return p.weekday.slice(0, 3) + ' ' + p.day + ' ' + p.month.slice(0, 3) + ' ' + pad(p.h) + ':' + pad(p.m);
 }
 function minutesOfDay(ms) { var p = parts(ms); return p.h * 60 + p.m; }
 
@@ -220,6 +235,7 @@ function render() {
   $('f1').style.display = show.f1 === false ? 'none' : '';
 
   // Weather
+  $('weather').style.gridTemplateColumns = (DATA.weather || []).length > 1 ? '1fr 1fr' : '1fr';
   $('weather').innerHTML = (DATA.weather || []).map(function (w) {
     return '<div class="box row" style="gap: 12px; padding: 10px 14px">' + svg(weatherIcon(w), '#F3E9D2', 38, 1.5) +
       '<div style="display: flex; flex-direction: column; min-width: 0">' +
@@ -236,6 +252,7 @@ function render() {
   renderBus(now);
   renderDiesel();
   parchBg();
+  fixGaps();
 }
 
 function renderDrive(now) {
@@ -243,7 +260,7 @@ function renderDrive(now) {
   if (!d || d.off || d.liveMin == null) { el.innerHTML = ''; return; }
   var alert = !!d.change;
   var morning = d.which === 'morning';
-  var roads = morning ? 'M4 · A419 · A420' : 'A420 · A419 · M4';
+  var roads = (d.usual && d.usual.summary) || (d.alt && d.alt.summary) || 'usual route';
   var sub = alert ? (d.change.reason + ' · via ' + d.change.via) :
     ('via ' + roads + (d.delayMin > 1 ? ' · ' + d.delayMin + ' min slower than usual' : ' · normal traffic'));
   var note = [];
@@ -299,10 +316,26 @@ function renderToday(now, mins) {
        var pp = person(e.who);
        rows.push(evRow(e.title, pp.name, e.allDay ? 'All day' : hm(e.start), pp.color, pp.tint, pp.icon));
      });
+  var bp = person('birthday');
+  bdaysOn(isoKey(now)).forEach(function (b) {
+    rows.unshift(evRow(bdayTitle(b), b.kind === 'remembrance' ? 'Remembering' : 'Today', bdayYears(b), bp.color, bp.tint, b.kind === 'remembrance' ? 'candle' : 'cake'));
+  });
   var tea = (DATA.dinners || {})[isoKey(now)];
-  if (tea && mins < 21 * 60) rows.push(evRow(tea, 'Tonight\'s dinner', 'Tea', '#8A6A3A', '#EFE4C6', 'dinner'));
+  if (tea && mins < 21 * 60) rows.push(evRow(tea, 'Tonight\'s dinner', 'Dinner', '#8A6A3A', '#EFE4C6', 'dinner'));
+  else if (!tea && DATA.dinnerIdea && mins < 18 * 60) {
+    var idea = DATA.dinnerIdea, wks = Math.round(idea.daysAgo / 7);
+    rows.push(evRow('How about ' + idea.name + '?', 'No dinner planned · last had ' + (wks >= 2 ? wks + ' weeks' : idea.daysAgo + ' days') + ' ago', 'Idea', '#8A6A3A', '#EFE4C6', 'dinner'));
+  }
   if (!rows.length) rows.push('<div class="muted" style="font-size: 19px; font-style: italic; padding: 6px 2px">Nothing else planned today</div>');
   $('today').innerHTML = rows.slice(0, 4).join('');
+}
+
+function bdaysOn(iso) { return (DATA.birthdays || []).filter(function (b) { return b.date === iso; }); }
+function bdayTitle(b) { return b.title; }
+function bdayYears(b) {
+  if (!b.years) return '';
+  if (b.kind === 'birthday') return 'turns ' + b.years;
+  return b.years + (b.years === 1 ? ' year' : ' years');
 }
 
 function renderF1(now) {
@@ -315,7 +348,7 @@ function renderF1(now) {
     count = d > 0 ? d + 'd ' + h + 'h' : h + 'h ' + m + 'm';
   }
   var line = (f.sprint ? 'Sprint ' + short(f.sprint) + ' · ' : '') +
-             (f.qualifying ? 'Qualifying ' + short(f.qualifying) + ' · ' : '') + 'Race ' + short(f.race) + ' (UK)';
+             (f.qualifying ? 'Qualifying ' + short(f.qualifying) + ' · ' : '') + 'Race ' + short(f.race);
   el.innerHTML = '<div class="box row" style="gap: 14px; padding: 10px 18px; border-radius: 14px">' +
     '<span class="badge" style="width: 38px; height: 38px; background: #DCEBDF">' + svg('car', '#2E7D4F', 24) + '</span>' +
     '<div class="grow" style="display: flex; flex-direction: column">' +
@@ -338,6 +371,10 @@ function renderWeek(now) {
         var pp = person(e.who);
         return '<span class="chip" style="background: ' + pp.tint + '">' + svg(pp.icon, pp.color, 18, 2) +
           '<span class="ct">' + (e.allDay ? 'All day' : hm(e.start)) + '</span><span class="cn">' + esc(e.title) + '</span></span>';
+      }).join('') + bdaysOn(isoKey(ms)).map(function (b) {
+        var bp = person('birthday');
+        return '<span class="chip" style="background: ' + bp.tint + '">' + svg(b.kind === 'remembrance' ? 'candle' : 'cake', bp.color, 18, 2) +
+          (b.years ? '<span class="ct">' + esc(bdayYears(b)) + '</span>' : '') + '<span class="cn">' + esc(b.title) + '</span></span>';
       }).join('');
     html += '<div class="wk"><div class="d"><span class="dow">' + p.weekday.slice(0, 3).toUpperCase() +
       '</span><span class="num">' + p.day + '</span></div><div style="min-width: 0">' + chips + '</div>' +
@@ -346,7 +383,7 @@ function renderWeek(now) {
   }
   $('week').innerHTML = html;
   $('weekRange').textContent = first.day + ' – ' + last.day + ' ' + last.month;
-  var ppl = ['owner', 'commuter', 'family'];
+  var ppl = DATA.legend || ['owner', 'commuter', 'family'];
   $('legend').innerHTML = ppl.map(function (k) {
     var pp = person(k);
     return '<span class="row" style="gap: 6px">' + svg(pp.icon, pp.color, 18, 2) + esc(pp.name) + '</span>';
@@ -398,7 +435,7 @@ function makeStars() {
   var seed = 7, html = '';
   function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
   for (var i = 0; i < 90; i++) {
-    var x = Math.round(rnd() * 1270), y = Math.round(rnd() * 790);
+    var x = Math.round(rnd() * 1270), y = Math.round(rnd() * (STAGE_H - 10));
     if (y > 160 && y < 520 && x > 280 && x < 1000) continue;
     var size = rnd() > .85 ? 3 : (rnd() > .5 ? 2 : 1), warm = rnd() > .88;
     html += '<span class="star" style="left:' + x + 'px;top:' + y + 'px;width:' + size + 'px;height:' + size +
@@ -432,6 +469,8 @@ function renderNight(now, p) {
     var first = (DATA.calendar.events || []).filter(function (e) { return dayKey(e.start) === tomorrow && !e.allDay; })[0];
     if (first) info.push('<span>Tomorrow: ' + esc(first.title) + ' ' + hm(first.start) + '</span>');
   }
+  var bTomorrow = DATA && DATA.birthdays ? bdaysOn(isoKey(now + (minutesOfDay(now) >= NIGHT_FROM ? 864e5 : 0))) : [];
+  if (bTomorrow.length) info.push(svg('cake', '#A9A2C6', 18) + '<span>' + esc(bTomorrow[0].title) + (bTomorrow.length > 1 ? ' +' + (bTomorrow.length - 1) : '') + '</span>');
   $('nInfo').innerHTML = info.map(function (h) { return '<span class="row" style="gap: 8px">' + h + '</span>'; }).join('');
   $('nInfo').style.display = info.length ? 'flex' : 'none';
 }
@@ -454,19 +493,71 @@ function load() {
       .withFailureHandler(function () { /* keep showing the last data; try again next round */ })
       .getBoardData(BOARD_KEY);
   } else if (API_URL) {
-    fetch(API_URL + '?api=1&k=' + encodeURIComponent(BOARD_KEY))
-      .then(function (r) { return r.json(); })
-      .then(function (d) { if (d && !d.error) { DATA = d; render(); } })
-      .catch(function () { /* keep the last data; try again next round */ });
+    // XMLHttpRequest rather than fetch, so iOS 9/10 iPads work too.
+    var x = new XMLHttpRequest();
+    x.open('GET', API_URL + '?api=1&k=' + encodeURIComponent(BOARD_KEY));
+    x.onload = function () {
+      try { var d = JSON.parse(x.responseText); if (d && !d.error) { DATA = d; render(); } } catch (e) { /* keep the last data */ }
+    };
+    x.send();
   } else if (window.SAMPLE_DATA) {
     DATA = window.SAMPLE_DATA; render();
   }
 }
+// The board is laid out 1280 wide. On a 4:3 screen (iPad) it grows taller (1280x960)
+// instead of leaving black bars, and the week panel and today list get the extra room.
+var STAGE_H = 800;
 function fit() {
-  var s = Math.min(window.innerWidth / 1280, window.innerHeight / 800);
-  $('stage').style.transform = 'scale(' + s + ')';
-  $('stage').style.left = Math.round((window.innerWidth - 1280 * s) / 2) + 'px';
-  $('stage').style.top = Math.round((window.innerHeight - 800 * s) / 2) + 'px';
+  var w = window.innerWidth, h = window.innerHeight;
+  STAGE_H = w / h < 1.45 ? 960 : 800;
+  ['stage', 'day', 'night'].forEach(function (id) { $(id).style.height = STAGE_H + 'px'; });
+  var s = Math.min(w / 1280, h / STAGE_H);
+  var t = 'scale(' + s + ')';
+  $('stage').style.webkitTransform = t; $('stage').style.transform = t;
+  $('stage').style.left = Math.round((w - 1280 * s) / 2) + 'px';
+  $('stage').style.top = Math.round((h - STAGE_H * s) / 2) + 'px';
+}
+
+// Flexbox "gap" only works from iOS 14.5. On older Safari, turn each flex
+// container's gap into margins on its children.
+var FLEX_GAP = (function () {
+  var d = document.createElement('div');
+  d.style.cssText = 'display:flex;flex-direction:column;gap:1px;position:absolute;visibility:hidden';
+  d.innerHTML = '<div></div><div></div>';
+  document.body.appendChild(d);
+  var ok = d.scrollHeight === 1;
+  document.body.removeChild(d);
+  return ok;
+})();
+var CLASS_GAPS = { day: 28, 'col-l': 16, 'col-r': 14, ev: 16, chip: 8, wk: 16, d: 8 };
+function gapOf(el, cs) {
+  var g = parseFloat(cs.columnGap || cs.gridColumnGap || cs.gap);
+  if (g > 0) return g;
+  var m = (el.getAttribute('style') || '').match(/(?:^|;)\s*gap:\s*([\d.]+)px/);
+  if (m) return +m[1];
+  if (CLASS_GAPS[el.id]) return CLASS_GAPS[el.id];
+  var cls = (el.className && el.className.split) ? el.className.split(' ') : [];
+  for (var i = 0; i < cls.length; i++) if (CLASS_GAPS[cls[i]]) return CLASS_GAPS[cls[i]];
+  return 0;
+}
+function fixGaps() {
+  if (FLEX_GAP) return;
+  var all = $('stage').getElementsByTagName('*');
+  for (var i = 0; i < all.length; i++) {
+    var el = all[i], cs = window.getComputedStyle(el);
+    if (cs.display.indexOf('flex') === -1) continue;
+    var g = gapOf(el, cs);
+    if (!g) continue;
+    var col = cs.flexDirection.indexOf('column') === 0, first = true;
+    for (var c = el.firstElementChild; c; c = c.nextElementSibling) {
+      if (window.getComputedStyle(c).display === 'none') continue;
+      // Keep "push to the right" items (margin-left: auto) where they are.
+      var auto = /(^|\s)dn(\s|$)/.test(c.className) || /margin-left:\s*auto/.test(c.getAttribute('style') || '');
+      if (col) c.style.marginTop = first ? '' : g + 'px';
+      else if (!auto) c.style.marginLeft = first ? '' : g + 'px';
+      first = false;
+    }
+  }
 }
 function battery() {
   if (!navigator.getBattery) return;
@@ -487,11 +578,12 @@ function applyArt() {
   }
 }
 window.addEventListener('resize', fit);
-fit(); battery(); render(); applyArt(); load();
+fit(); battery(); render(); applyArt(); load(); fixGaps();
 setInterval(render, 15000);
 setInterval(load, REFRESH_MS);
 // Reload the whole page once a night to clear memory on the old tablet.
 setInterval(function () { var m = minutesOfDay(Date.now()); if (m === 4 * 60) location.reload(); }, 60000);
+
 </script>
 </body>
 </html>
