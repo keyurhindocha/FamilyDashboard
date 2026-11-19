@@ -3,9 +3,9 @@
  * =========================================================================
  * Runs in your own Google account. Gathers everything the board shows and
  * hands it to the board page as JSON:
- *   calendars (up to three people), bins, weather + frost, a commuter's drive
- *   with route-change alerts, F1 countdown, next bus, cheapest fuel nearby,
- *   notes and weekly dinners.
+ *   calendars, birthdays, bins, weather + frost, a commuter's drive with
+ *   route-change alerts, F1 countdown, local gas prices with tomorrow's
+ *   prediction, notes and dinners.
  *
  * Your settings live in Config.gs. Secrets live in Project Settings >
  * Script properties, never in code. See docs/setup.md.
@@ -38,15 +38,12 @@ function getBoardData(key) {
   var out = { now: now.getTime(), people: PEOPLE, tz: CONFIG.TIMEZONE, errors: {} };
   var on = function (m) { return !CONFIG.MODULES || CONFIG.MODULES[m] !== false; };
   out.show = CONFIG.MODULES || {};
-  out.busStop = CONFIG.BUS_STOP_NAME || '';
-  out.fuelLabel = CONFIG.FUEL_LABEL || 'Diesel';
   section_(out, 'calendar', function () { return cached_('cal', 300, getCalendar_); });
   section_(out, 'bins', function () { return on('bins') ? getBins_(now) : null; });
   section_(out, 'weather', function () { return cached_('wx', 900, getWeather_); });
   section_(out, 'drive', function () { return on('commute') && CONFIG.WORK ? getDriveForBoard_(now) : null; });
   section_(out, 'f1', function () { return on('f1') ? cached_('f1', 21600, getF1_) : null; });
-  section_(out, 'bus', function () { return on('bus') ? cached_('bus', 60, getBus_) : null; });
-  section_(out, 'diesel', function () { return on('fuel') ? cached_('fuel', 1800, getDiesel_) : null; });
+  section_(out, 'gas', function () { return on('gas') ? cached_('gas', 3 * 3600, getGas_) : null; });
   section_(out, 'notices', function () { return on('notices') ? cached_('notices', 300, getNotices_) : []; });
   section_(out, 'dinners', function () { return on('dinners') ? cached_('dinners', 600, getDinners_) : {}; });
   section_(out, 'birthdays', function () { return on('birthdays') ? cached_('bdays', 3600, getBirthdays_) : []; });
@@ -203,7 +200,7 @@ function routes_(from, to, usualRoads) {
     .setMode(Maps.DirectionFinder.Mode.DRIVING)
     .setDepart(new Date(Date.now() + 60000))
     .setAlternatives(true)
-    .setRegion(CONFIG.MAPS_REGION || 'uk')
+    .setRegion(CONFIG.MAPS_REGION || 'ca')
     .getDirections();
   return pickRoutes_(res.routes || [], usualRoads);
 }
@@ -400,205 +397,51 @@ function nextRace_(races, nowMs) {
   return null;
 }
 
-// ---------------------------------------------------------------- bus
-// Bus times come from TransportAPI ("NextBuses powered by TransportAPI").
-// The free plan allows 30 requests a day, so the board fetches a list of upcoming
-// buses every 45 minutes (6am to 10:30pm, about 22 a day) and steps through it itself.
-var BUS = { FROM: '06:00', UNTIL: '22:30', REFRESH_MIN: 45, DAILY_MAX: 25 };
-
-function getBus_() {
-  var id = prop_('TAPI_APP_ID'), key = prop_('TAPI_APP_KEY');
-  if (!id || !key || !CONFIG.BUS_STOP_ATCO) return { missingKey: true };
-  var now = new Date(), nowMs = now.getTime();
-  var stored = JSON.parse(prop_('BUS_LIST') || '{"fetched":0,"departures":[]}');
-  var upcoming = stored.departures.filter(function (d) { return d.time > nowMs - 30000; });
-
-  var today = fmt_(now, 'yyyy-MM-dd'), hhmm = fmt_(now, 'HH:mm');
-  var count = (prop_('BUS_CALLS') || '').split('|');
-  var used = count[0] === today ? Number(count[1]) : 0;
-  var ageMin = (nowMs - stored.fetched) / 60000;
-  var awake = hhmm >= BUS.FROM && hhmm <= BUS.UNTIL;
-  var due = ageMin >= BUS.REFRESH_MIN || (upcoming.length < 2 && ageMin >= 20);
-  if (!awake || !due || used >= BUS.DAILY_MAX) return { departures: upcoming.slice(0, 6) };
-
-  setProp_('BUS_CALLS', today + '|' + (used + 1));
-  var url = 'https://transportapi.com/v3/uk/bus/stop/' + CONFIG.BUS_STOP_ATCO + '/live.json' +
-    '?app_id=' + encodeURIComponent(id) + '&app_key=' + encodeURIComponent(key) +
-    '&group=no&limit=20&nextbuses=yes';
-  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-  if (res.getResponseCode() >= 300) {
-    if (upcoming.length) return { departures: upcoming.slice(0, 6) };
-    throw new Error('TransportAPI HTTP ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 200));
-  }
-  var list = parseTapi_(JSON.parse(res.getContentText()));
-  setProp_('BUS_LIST', JSON.stringify({ fetched: nowMs, departures: list.slice(0, 15) }));
-  return { departures: list.filter(function (d) { return d.time > nowMs - 30000; }).slice(0, 6) };
-}
-
-/** Turns a TransportAPI live.json reply into [{line, destination, time(ms), live}] for our line. */
-function parseTapi_(json) {
-  var deps = json.departures || {}, all = deps.all;
-  if (!all) { all = []; Object.keys(deps).forEach(function (k) { all = all.concat(deps[k] || []); }); }
-  var hide = (CONFIG.BUS_HIDE_DESTINATION || '').toLowerCase();
-  var out = [];
-  all.forEach(function (d) {
-    var line = String(d.line_name || d.line || '');
-    var dest = d.direction || '';
-    if (CONFIG.BUS_LINE && line !== String(CONFIG.BUS_LINE)) return;
-    if (hide && dest.toLowerCase().indexOf(hide) !== -1) return;
-    var time = d.expected_departure_time || d.best_departure_estimate || d.aimed_departure_time;
-    var date = d.expected_departure_date || d.date;
-    if (!time || !date) return;
-    var t = Utilities.parseDate(date + ' ' + time, CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm').getTime();
-    out.push({ line: line, destination: dest, time: t, live: !!d.expected_departure_time });
-  });
-  out.sort(function (a, b) { return a.time - b.time; });
-  return out;
-}
-
-/** Parses a SIRI-SM response into [{line, destination, time(ms), live}] for our line. */
-function parseSiri_(text) {
-  var doc = XmlService.parse(text);
-  var visits = [];
-  walk_(doc.getRootElement(), function (el) { if (el.getName() === 'MonitoredStopVisit') visits.push(el); });
-  var out = [];
-  visits.forEach(function (v) {
-    var line = childText_(v, 'PublishedLineName') || childText_(v, 'LineRef');
-    var dest = childText_(v, 'DirectionName') || childText_(v, 'DestinationName') || '';
-    var expected = childText_(v, 'ExpectedDepartureTime');
-    var aimed = childText_(v, 'AimedDepartureTime');
-    var t = Date.parse(expected || aimed);
-    if (String(line) !== CONFIG.BUS_LINE || isNaN(t)) return;
-    if (CONFIG.BUS_HIDE_DESTINATION && dest.toLowerCase().indexOf(CONFIG.BUS_HIDE_DESTINATION.toLowerCase()) !== -1) return;
-    out.push({ line: line, destination: dest, time: t, live: !!expected });
-  });
-  out.sort(function (a, b) { return a.time - b.time; });
-  return out.slice(0, 4);
-}
-
-function walk_(el, fn) { fn(el); el.getChildren().forEach(function (c) { walk_(c, fn); }); }
-function childText_(el, name) {
-  var found = null;
-  walk_(el, function (c) { if (!found && c.getName() === name) found = c.getText(); });
-  return found;
-}
-
-// ---------------------------------------------------------------- diesel
-var FUEL_BASE = 'https://www.fuel-finder.service.gov.uk';
-
+// ---------------------------------------------------------------- gas prices
 /**
- * Fuel Finder only answers UK addresses and Google runs this script in the US,
- * so calls go through a small relay on Supabase that runs in London (x-region: eu-west-2).
- * Script properties: FUEL_RELAY_URL and FUEL_RELAY_KEY. Without them it calls Fuel Finder directly.
+ * Area average and tomorrow's predicted price from Gas Wizard (gaswizard.ca,
+ * Dan McTeague's daily predictions). Tomorrow's price is usually posted in the
+ * afternoon, so in the morning only today's price is known.
  */
-function fuelFetch_(path, opts) {
-  var relay = prop_('FUEL_RELAY_URL');
-  if (!relay) return UrlFetchApp.fetch(FUEL_BASE + path, opts);
-  var headers = { 'x-region': 'eu-west-2', 'x-relay-key': prop_('FUEL_RELAY_KEY') || '' };
-  var given = opts.headers || {};
-  if (given.Authorization) headers['x-ff-auth'] = given.Authorization;
-  if (given.Accept) headers['x-ff-accept'] = given.Accept;
-  var o = { method: opts.method || 'get', headers: headers, muteHttpExceptions: true };
-  if (opts.payload) { o.payload = opts.payload; o.contentType = opts.contentType; }
-  return UrlFetchApp.fetch(relay + '?forceFunctionRegion=eu-west-2&p=' + encodeURIComponent(path), o);
+function getGas_() {
+  var type = CONFIG.GAS_TYPE || 'Regular';
+  var url = 'https://gaswizard.ca/gas-prices/' + encodeURIComponent(CONFIG.GAS_CITY || 'mississauga') + '/' +
+    (type === 'Regular' ? '' : '?gastype=premium-diesel');
+  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, headers: { 'User-Agent': 'Mozilla/5.0 (family dashboard)' } });
+  if (res.getResponseCode() >= 300) throw new Error('Gas Wizard HTTP ' + res.getResponseCode());
+  var days = parseGasWizard_(res.getContentText(), type);
+  if (!days.length) throw new Error('Gas Wizard: no ' + type + ' prices found on the page');
+  var today = fmt_(new Date(), 'yyyy-MM-dd'), tomorrow = fmt_(new Date(Date.now() + 864e5), 'yyyy-MM-dd');
+  var byDate = {};
+  days.forEach(function (d) { byDate[d.date] = d; });
+  var now = byDate[today] || days.filter(function (d) { return d.date < today; })[0] || null;
+  return { city: CONFIG.GAS_LABEL || 'Mississauga', type: type, today: now, tomorrow: byDate[tomorrow] || null };
 }
 
-function fuelToken_() {
-  var cache = CacheService.getScriptCache();
-  var tok = cache.get('fuel_token');
-  if (tok) return tok;
-  var res = fuelFetch_('/api/v1/oauth/generate_access_token', {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    headers: { Accept: 'application/json' },
-    payload: JSON.stringify({ grant_type: 'client_credentials', client_id: prop_('FUEL_CLIENT_ID'), client_secret: prop_('FUEL_CLIENT_SECRET') })
+/** Pure: [{date: 'yyyy-mm-dd', price: 147.9, change: -4}] newest first, for one fuel type, from a Gas Wizard city page. */
+function parseGasWizard_(html, type) {
+  var i = html.indexOf('<ul class="single-city-prices');
+  if (i === -1) return [];
+  var block = html.slice(i, html.indexOf('</ul>', i));
+  var out = [];
+  block.split('<li>').slice(1).forEach(function (li) {
+    var dm = li.match(/class="datetext">([^<]+)</);
+    if (!dm) return;
+    var d = new Date(dm[1].trim() + ' 12:00');
+    if (isNaN(d.getTime())) return;
+    var parts = li.split('class="fueltitle">');
+    for (var k = 1; k < parts.length; k++) {
+      if (parts[k].slice(0, parts[k].indexOf('<')).trim() !== type) continue;
+      var pm = parts[k].match(/class="fuelprice">\s*(?:<span class="fuel-price-value">)?\s*([\d.]+)/);
+      if (!pm) continue;
+      var cm = parts[k].match(/class="price-text">\s*([+-]?[\d.]+)/);
+      var change = cm ? Number(cm[1]) : 0;
+      if (cm && /pd-down/.test(parts[k]) && change > 0) change = -change;
+      out.push({ date: d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2),
+                 price: Number(pm[1]), change: change });
+    }
   });
-  if (res.getResponseCode() >= 300) throw new Error('Fuel Finder token HTTP ' + res.getResponseCode());
-  var j = JSON.parse(res.getContentText());
-  tok = (j.data && j.data.access_token) || j.access_token;
-  if (!tok) throw new Error('Fuel Finder: no token in response');
-  cache.put('fuel_token', tok, 3000);
-  return tok;
-}
-
-function fuelBatches_(path) {
-  var tok = fuelToken_(), all = [];
-  for (var b = 1; b <= 30; b++) {
-    var res = fuelFetch_(path + '?batch-number=' + b, {
-      muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + tok, Accept: 'application/json' }
-    });
-    if (res.getResponseCode() === 404) break;
-    if (res.getResponseCode() >= 300) throw new Error('Fuel Finder HTTP ' + res.getResponseCode() + ' on batch ' + b);
-    var j = JSON.parse(res.getContentText());
-    var rows = Array.isArray(j) ? j : (j.data || []);
-    if (!rows.length) break;
-    all = all.concat(rows);
-    if (rows.length < 500) break;
-    Utilities.sleep(2100); // stay under 30 requests a minute
-  }
-  return all;
-}
-
-/** Nearby stations, refreshed once a week (stations rarely change). */
-function nearbyStations_() {
-  var raw = prop_('FUEL_NEARBY');
-  var saved = raw ? JSON.parse(raw) : null;
-  if (saved && Date.now() - saved.at < 7 * 864e5) return saved.stations;
-  var home = homeLatLng_();
-  var stations = fuelBatches_('/api/v1/pfs').filter(function (s) {
-    return s.location && !s.permanent_closure && !s.temporary_closure;
-  }).map(function (s) {
-    var lat = Number(s.location.latitude), lng = Number(s.location.longitude);
-    return { id: s.node_id, name: s.brand_name || s.trading_name, area: s.location.city || s.location.postcode || '',
-             miles: milesBetween_(home.lat, home.lng, lat, lng) };
-  }).filter(function (s) { return s.miles <= CONFIG.FUEL_RADIUS_MILES; });
-  setProp_('FUEL_NEARBY', JSON.stringify({ at: Date.now(), stations: stations }));
-  return stations;
-}
-
-function getDiesel_() {
-  if (!prop_('FUEL_CLIENT_ID')) return { missingKey: true };
-  var near = nearbyStations_(), byId = {};
-  near.forEach(function (s) { byId[s.id] = s; });
-  var prices = fuelBatches_('/api/v1/pfs/fuel-prices');
-  return { stations: cheapest_(prices, byId, CONFIG.FUEL_TYPE, CONFIG.FUEL_SHOW) };
-}
-
-/** Pure: cheapest N of one fuel type among known nearby stations. */
-function cheapest_(prices, byId, fuelType, n) {
-  var list = [];
-  prices.forEach(function (p) {
-    var s = byId[p.node_id];
-    if (!s || !p.fuel_prices) return;
-    p.fuel_prices.forEach(function (f) {
-      if (f.fuel_type === fuelType && f.price) {
-        list.push({ name: s.name, area: s.area, miles: Math.round(s.miles * 10) / 10, price: Number(f.price) });
-      }
-    });
-  });
-  list.sort(function (a, b) { return a.price - b.price || a.miles - b.miles; });
-  return list.slice(0, n);
-}
-
-function homeLatLng_() {
-  var raw = prop_('HOME_LATLNG');
-  if (raw) return JSON.parse(raw);
-  var v;
-  if (CONFIG.HOME) {
-    var loc = Maps.newGeocoder().setRegion(CONFIG.MAPS_REGION || 'uk').geocode(CONFIG.HOME).results[0].geometry.location;
-    v = { lat: loc.lat, lng: loc.lng };
-  } else {
-    v = { lat: CONFIG.PLACES[0].lat, lng: CONFIG.PLACES[0].lon };   // no HOME: use the first weather place
-  }
-  setProp_('HOME_LATLNG', JSON.stringify(v));
-  return v;
-}
-
-function milesBetween_(lat1, lon1, lat2, lon2) {
-  var R = 3958.8, toR = Math.PI / 180;
-  var dLat = (lat2 - lat1) * toR, dLon = (lon2 - lon1) * toR;
-  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  return 2 * R * Math.asin(Math.sqrt(a));
+  return out;
 }
 
 // ---------------------------------------------------------------- notices
@@ -748,10 +591,8 @@ function setup() {
   if (CONFIG.WORK && !(CONFIG.MODULES && CONFIG.MODULES.commute === false)) {
     ScriptApp.newTrigger('commuteWatch').timeBased().everyMinutes(5).create();
   }
-  if (!prop_('FUEL_RELAY_KEY')) setProp_('FUEL_RELAY_KEY', Utilities.getUuid().replace(/-/g, ''));
   Logger.log('Board key: ' + prop_('BOARD_KEY'));
   Logger.log('After deploying, your board link is: <your web app URL>?k=' + prop_('BOARD_KEY'));
-  Logger.log('Only if you use the UK fuel relay: set RELAY_KEY in Supabase to ' + prop_('FUEL_RELAY_KEY'));
 }
 
 /** Run from the editor to check every feed and see any problems in the log. */
@@ -805,24 +646,6 @@ function testCalendars() {
   });
 }
 
-/** Live fuel prices near you, with when each station last changed its price. Takes 30-40 seconds. */
-function testFuel() {
-  var near = nearbyStations_(), byId = {};
-  near.forEach(function (s) { byId[s.id] = s; });
-  Logger.log('Nearby stations known: ' + near.length);
-  var rows = [];
-  fuelBatches_('/api/v1/pfs/fuel-prices').forEach(function (p) {
-    var s = byId[p.node_id];
-    if (!s || !p.fuel_prices) return;
-    p.fuel_prices.forEach(function (f) {
-      if (f.fuel_type !== CONFIG.FUEL_TYPE) return;
-      rows.push({ price: Number(f.price), text: f.price + 'p  ' + s.name + ' (' + (Math.round(s.miles * 10) / 10) + ' mi)  last changed ' + (f.price_last_updated || '?') });
-    });
-  });
-  rows.sort(function (a, b) { return a.price - b.price; });
-  rows.slice(0, 8).forEach(function (r) { Logger.log(r.text); });
-  Logger.log('Board currently shows: ' + JSON.stringify(cached_('fuel', 1800, getDiesel_)));
-}
 
 /** What notes and dinners the board can see right now (skips the board's saved copy). */
 function testNotes() {

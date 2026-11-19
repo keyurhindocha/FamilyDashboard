@@ -25,33 +25,13 @@ The commuter gets **one** push notification per commute, and only when the usual
 
 `AFTERNOON_LAST_ALERT` sets the latest time for an evening alert, which is useful if the commuter's phone loses data later on (e.g. a dashcam takes over the phone's connection).
 
-## Next bus (UK)
+## Gas prices
 
-Uses TransportAPI (“NextBuses powered by TransportAPI”). The free plan allows **30 requests a day**, so the board fetches a list of upcoming buses about every 45 minutes (6am–10:30pm) and steps through it itself.
+**Config.gs:** `GAS_CITY`, `GAS_LABEL`, `GAS_TYPE` (`Regular`, `Premium` or `Diesel`). No account or key needed.
 
-1. Register at [developer.transportapi.com](https://developer.transportapi.com) (free plan) and copy your **app_id** and **app_key**.
-2. Script properties: `TAPI_APP_ID`, `TAPI_APP_KEY`.
-3. Find your stop on [bustimes.org](https://bustimes.org). The stop page URL ends in its ATCO code (e.g. `.../stops/4680SWA10759`).
-4. Config.gs: `BUS_STOP_ATCO`, `BUS_STOP_NAME`, `BUS_LINE` (or `''` for all lines), `BUS_HIDE_DESTINATION` (optional).
+Shows today's average price for your area and tomorrow's predicted price from [Gas Wizard](https://gaswizard.ca) (Dan McTeague's daily predictions), with a plain hint: "Up 3¢ tomorrow · fill up today" or "Down 2¢ tomorrow · wait if you can". Tomorrow's prediction is usually posted mid-afternoon, so mornings show only today's price. When it's going up by 2¢ or more, night mode mentions it too.
 
-Times say "live" when the operator sends real-time data, otherwise "timetable".
-
-## Cheapest fuel (UK)
-
-Uses the UK government **Fuel Finder** API (every UK forecourt has to report its prices).
-
-**Why there's a relay:** Fuel Finder only answers requests from UK internet addresses, and Google runs Apps Script in the US (you'd get an empty HTTP 403). A tiny free Supabase function in London passes the requests through.
-
-1. Register for the Fuel Finder API on GOV.UK and copy your **client ID** and **client secret**.
-   Script properties: `FUEL_CLIENT_ID`, `FUEL_CLIENT_SECRET`.
-2. Create a free [Supabase](https://supabase.com) project (any region).
-3. Edge Functions → **Deploy a new function → Via editor**. Name it `fuel-relay`, paste [`relay/fuel-relay.ts`](../relay/fuel-relay.ts) and deploy.
-4. In the function's settings, turn **off** "Enforce JWT verification" (the relay checks its own key instead).
-5. Edge Functions → **Secrets**: add `RELAY_KEY` with the value from the `setup` log (also in Script properties as `FUEL_RELAY_KEY`).
-6. Script properties: `FUEL_RELAY_URL` = the function URL, e.g. `https://xxxx.supabase.co/functions/v1/fuel-relay`.
-7. Run **testEverything**. The first run takes 1–2 minutes while it finds stations near `HOME` (or the first weather place); after that the station list is kept for a week.
-
-Config.gs: `FUEL_TYPE` (`B7_STANDARD` diesel, `E10`, `E5`), `FUEL_LABEL`, `FUEL_RADIUS_MILES`, `FUEL_SHOW`.
+`GAS_CITY` is the city as it appears in the page address, e.g. `gaswizard.ca/gas-prices/mississauga/`. The board reads the page every 3 hours. These are area averages, not individual stations; if the page layout changes, the section hides itself and `testEverything` shows the error.
 
 ## Notes and dinners
 

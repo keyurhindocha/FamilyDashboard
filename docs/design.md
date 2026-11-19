@@ -25,14 +25,14 @@ Fonts are **Cinzel** (headings, numbers) and **EB Garamond** (text), both free f
 
 Icons are drawn in code, so they stay sharp and can be any colour. They live in the `HFICONS` list in the page: each entry is the inside of an SVG drawn on a 1024×1024 grid, using `currentColor` so the board can tint it.
 
-**To replace one** (e.g. `bus`):
+**To replace one** (e.g. `fuel`):
 1. Get an SVG of the icon (see below for where).
 2. Open it in a text editor. Copy everything **between** `<svg …>` and `</svg>`.
 3. Change any `fill="#000000"` (or other colour) to `fill="currentColor"`. For outline-style icons, use `stroke="currentColor"` instead.
-4. Paste it as the value for `bus` in `HFICONS`.
-5. If the icon's `viewBox` isn't `0 0 1024 1024` (most icon sets use `0 0 24 24`), add it to `HFVIEW`, e.g. `bus: '0 0 24 24'`.
+4. Paste it as the value for `fuel` in `HFICONS`.
+5. If the icon's `viewBox` isn't `0 0 1024 1024` (most icon sets use `0 0 24 24`), add it to `HFVIEW`, e.g. `fuel: '0 0 24 24'`.
 
-Icon names in use: `cat`, `car`, `candle` (the house), `bin`, `sun`, `moon`, `cloud`, `rain`, `snow`, `fog`, `storm`, `frost`, `bus`, `fuel`, `alert`, `dinner`. To give a person a different icon, add a new name here and use it in `PEOPLE` in `Config.gs`.
+Icon names in use: `cat`, `car`, `candle` (the house), `bin`, `sun`, `moon`, `cloud`, `rain`, `snow`, `fog`, `storm`, `frost`, `fuel`, `alert`, `dinner`, `cake`. To give a person a different icon, add a new name here and use it in `PEOPLE` in `Config.gs`.
 
 **Tip:** solid, chunky icons read far better across a kitchen than thin outlines. Thin line icons looked washed out on the real tablet.
 
@@ -61,7 +61,7 @@ All the artwork and icons were generated in **[Higgsfield](https://higgsfield.ai
 
 - **Icons** were generated as **SVG output** (a real vector file, not a picture), so they could be pasted straight into `HFICONS`. Every icon used the same prompt pattern so the set matches:
 
-  > A single bold app icon glyph of **[a single-decker bus seen from the front, big windscreen, two headlights]**. Solid filled silhouette in pure black #000000 on a transparent background, **[windscreen and headlights]** as cut-out holes. No outline-only strokes, no gradients, no shading, no texture, no text. Thick chunky shapes, rounded corners, minimal detail so it stays crisp and readable at 24 pixels. Centered, filling about 85% of a square canvas.
+  > A single bold app icon glyph of **[a petrol pump with a hose, a display window near the top]**. Solid filled silhouette in pure black #000000 on a transparent background, **[the display window]** as a cut-out hole. No outline-only strokes, no gradients, no shading, no texture, no text. Thick chunky shapes, rounded corners, minimal detail so it stays crisp and readable at 24 pixels. Centered, filling about 85% of a square canvas.
 
   Only the bracketed parts change from icon to icon.
 

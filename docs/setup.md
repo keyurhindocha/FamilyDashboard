@@ -25,7 +25,7 @@ This is the only file you need to change. At minimum, set:
 - `PEOPLE`: names and colours. "owner" is your account, "commuter" is whoever's drive is tracked, "family" is a shared calendar.
 - `PLACES`: one or two towns for weather (latitude and longitude; right-click a spot in Google Maps to copy them).
 - Bins: `BIN_DAY`, `BIN_CYCLE`, `BIN_CYCLE_START`, `BIN_EVERY_WEEK`. Set `BIN_DAY: 0` if you don't want bins.
-- `TIMEZONE` if you're not in the UK.
+- `TIMEZONE` (an IANA name such as `America/Toronto`), and the same in `appsscript.json` → `timeZone` and `TZ` at the top of the board page's script.
 
 Switch whole sections off in `MODULES` (set them to `false`).
 
@@ -79,7 +79,5 @@ Project Settings → **Script properties**. Never put these in code.
 |---|---|---|
 | `BOARD_KEY` | everything | created by `setup` |
 | `NTFY_TOPIC`, `NTFY_TOKEN` | route alerts | [modules.md](modules.md#route-alerts) |
-| `TAPI_APP_ID`, `TAPI_APP_KEY` | next bus | [modules.md](modules.md#next-bus-uk) |
-| `FUEL_CLIENT_ID`, `FUEL_CLIENT_SECRET`, `FUEL_RELAY_URL` | fuel prices | [modules.md](modules.md#cheapest-fuel-uk) |
-| `FUEL_RELAY_KEY` | fuel prices | created by `setup` |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | dinners from the meal tracker | [modules.md](modules.md#dinners-from-the-meal-tracker) |
 | `TODOIST_TOKEN` | notes and dinners | [modules.md](modules.md#notes-and-dinners) |

@@ -9,7 +9,7 @@
 // Who's on the board. "owner" = the Google account running this script,
 // "commuter" = the person whose drive to work is tracked (can be the owner too),
 // "family" = a shared calendar for everyone. Icons: cat, car, candle (house),
-// sun, moon, bus, fuel, bin, frost, dinner. Colours are any CSS colour.
+// sun, moon, fuel, bin, frost, dinner, cake. Colours are any CSS colour.
 var PEOPLE = {
   owner:    { name: 'Keyur',    color: '#2E7D4F', tint: '#DCEBDF', icon: 'car' },
   commuter: { name: '',         color: '#B03A6F', tint: '#F3DDE7', icon: 'cat' },   // unused until COMMUTER_CALENDAR is set
@@ -26,8 +26,7 @@ var CONFIG = {
     commute: false,  // drive time, leave-by, route-change alerts (needs HOME + WORK)
     bins: true,      // bin day reminders (needs BIN_DAY)
     f1: true,        // Formula 1 countdown
-    bus: false,      // next bus (UK only)
-    fuel: false,     // cheapest fuel nearby (UK only)
+    gas: true,       // local gas price + tomorrow's prediction (Gas Wizard)
     notices: true,   // notes from Todoist or Google Tasks
     dinners: true,   // dinners from the meal tracker (Supabase), or Todoist
     birthdays: true  // birthdays & anniversaries for the next two weeks
@@ -47,9 +46,9 @@ var CONFIG = {
   ],
 
   // ---- Commute (any address or postcode Google Maps understands).
-  HOME: '',                         // e.g. 'SW1A 1AA, UK'
-  WORK: '',                         // e.g. 'Example House, High Street, Oxford OX1 1AA, UK'
-  USUAL_ROADS: ['M40'],             // the usual route must mention all of these roads
+  HOME: '',                         // e.g. '123 Example St, Mississauga, ON'
+  WORK: '',                         // e.g. '1 Example Ave, Toronto, ON'
+  USUAL_ROADS: ['401'],             // the usual route must mention all of these roads
   WORK_DAYS: [1, 2, 3, 4, 5],       // Mon=1 ... Sun=7
   START_TIME: '08:00',
   FINISH_TIME: '16:00',
@@ -77,15 +76,9 @@ var CONFIG = {
   MEAL_USER_ID: '',                // your user id in the meal tracker (Supabase > Authentication > Users)
   MEAL_SUGGEST: true,              // when no dinner is planned, suggest a favourite you haven't had lately
 
-  // ---- Next bus (UK, TransportAPI). Find your stop's ATCO code on bustimes.org.
-  BUS_STOP_ATCO: '',               // e.g. '4680SWA10759'
-  BUS_STOP_NAME: '',               // shown under the time, e.g. 'High Street'
-  BUS_LINE: '',                    // e.g. '7'
-  BUS_HIDE_DESTINATION: '',        // skip buses heading to this place ('' = show all)
-
-  // ---- Cheapest fuel (UK Fuel Finder). Types: B7_STANDARD (diesel), E10, E5.
-  FUEL_TYPE: 'B7_STANDARD',
-  FUEL_LABEL: 'Diesel',
-  FUEL_RADIUS_MILES: 5,
-  FUEL_SHOW: 3
+  // ---- Gas prices (gaswizard.ca). GAS_CITY is the city in the page address,
+  // e.g. gaswizard.ca/gas-prices/mississauga/. Types: 'Regular', 'Premium', 'Diesel'.
+  GAS_CITY: 'mississauga',
+  GAS_LABEL: 'Mississauga',
+  GAS_TYPE: 'Regular'
 };
