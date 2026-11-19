@@ -66,13 +66,13 @@ flowchart LR
 
 ## 🍎 Built for an old iPad
 
-The tablet is a retired iPad that stays on in the kitchen all the time, so the page is careful about old Safari:
+The tablet is a retired **iPad 4th generation (MD510C/A)**, stuck on **iOS 10.3.3** for good, that stays on in the kitchen all the time. So the page is careful about old Safari:
 
-- Works on **iOS 10.3 and newer**. Spacing that old Safari can't do is replaced with margins, it uses `XMLHttpRequest` instead of `fetch`, and it falls back to the iPad's own clock if time zones aren't supported.
+- Written for **Safari 10**: plain ES5 JavaScript, `XMLHttpRequest` instead of `fetch`, flexbox spacing replaced with margins, and a fallback to the iPad's own clock if time zones aren't supported.
 - On 4:3 screens it **grows taller** instead of leaving black bars, and the week panel gets the extra room.
 - Reloads itself at 4am every night to clear memory.
 
-**Kiosk setup:** open the board in Safari → Share → **Add to Home Screen**. Then go to Settings → Display → **Auto-Lock: Never**, and turn on Settings → Accessibility → **Guided Access** (triple-click the Home button to lock the board on screen).
+**Kiosk setup (iOS 10):** Settings → Display & Brightness → **Auto-Lock: Never**. Open the board in Safari → Share → **Add to Home Screen**. Then turn on Settings → General → Accessibility → **Guided Access** and triple-click the Home button to lock the board on screen. Full steps are in [docs/tablet.md](docs/tablet.md).
 
 ## 🚀 Setting it up
 

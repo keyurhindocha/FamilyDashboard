@@ -51,7 +51,7 @@
         </div>
         <div id="clock" class="cz" style="font-size: 116px; line-height: 1; font-weight: 500"></div>
       </div>
-      <div id="weather" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"></div>
+      <div id="weather" style="display: grid; grid-template-columns: 1fr 1fr; grid-gap: 12px; gap: 12px"></div>
       <div id="drive"></div>
       <div id="binsTonight"></div>
       <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; overflow: hidden">
@@ -84,7 +84,7 @@
       <span id="nClock" class="cz" style="font-size: 190px; line-height: 1; font-weight: 500; color: #8C86B0"></span>
       <span id="nMoon" class="row" style="gap: 10px; font-size: 18px; font-style: italic; color: #8C86B0"></span>
     </div>
-    <div id="nInfo" style="position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 36px; align-items: center; width: max-content; max-width: 1120px; padding: 14px 32px; border: 1px solid #2E2A48; border-radius: 32px; font-size: 18px"></div>
+    <div id="nInfo" style="position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 36px; align-items: center; width: -webkit-max-content; width: max-content; max-width: 1120px; padding: 14px 32px; border: 1px solid #2E2A48; border-radius: 32px; font-size: 18px"></div>
     <span id="nBattery" style="position: absolute; right: 28px; bottom: 24px; font-size: 14px; color: #8C86B0"></span>
   </div>
 </div>
@@ -232,7 +232,7 @@ function render() {
   $('day').className = night ? 'hidden' : '';
   $('night').className = night ? '' : 'hidden';
   var p = parts(now);
-  if (night) { renderNight(now, p); return; }
+  if (night) { renderNight(now, p); fixGaps(); return; }
 
   $('date').textContent = (p.weekday + ' · ' + p.day + ' ' + p.month).toUpperCase();
   $('clock').textContent = hm(now);
@@ -395,7 +395,7 @@ function renderWeek(now) {
   var ppl = DATA.legend || ['owner', 'commuter', 'family'];
   $('legend').innerHTML = ppl.map(function (k) {
     var pp = person(k);
-    return '<span class="row" style="gap: 6px">' + svg(pp.icon, pp.color, 18, 2) + esc(pp.name) + '</span>';
+    return '<span class="row" style="gap: 6px">' + svg(pp.icon, pp.color, 18, 2) + '<span>' + esc(pp.name) + '</span></span>';
   }).join('');
   var n = DATA.notices || [];
   $('notices').textContent = n.length ? 'Notices: ' + n.slice(0, 3).join(' · ') : '';
@@ -518,8 +518,8 @@ function fit() {
   $('stage').style.top = Math.round((h - STAGE_H * s) / 2) + 'px';
 }
 
-// Flexbox "gap" only works from iOS 14.5. On older Safari, turn each flex
-// container's gap into margins on its children.
+// Flexbox "gap" only works from iOS 14.5. On older Safari (our iPad 4 is stuck on
+// iOS 10.3.3), turn each flex container's gap into margins on its children.
 var FLEX_GAP = (function () {
   var d = document.createElement('div');
   d.style.cssText = 'display:flex;flex-direction:column;gap:1px;position:absolute;visibility:hidden';
@@ -529,12 +529,29 @@ var FLEX_GAP = (function () {
   document.body.removeChild(d);
   return ok;
 })();
-var CLASS_GAPS = { day: 28, 'col-l': 16, 'col-r': 14, ev: 16, chip: 8, wk: 16, d: 8 };
+var CLASS_GAPS = { day: 28, 'col-l': 16, 'col-r': 14, ev: 16, chip: 8, wk: 16, d: 8, dn: 6 };
+// Old Safari drops "gap" from an element's style text as soon as script touches
+// el.style, so read it once from the original markup and keep it in data-gap.
+function gapAttr(el) {
+  var v = el.getAttribute('data-gap');
+  if (v === null) {
+    // "gap: 10px 36px" is row gap then column gap.
+    var m = (el.getAttribute('style') || '').match(/(?:^|;)\s*gap:\s*([\d.]+)px(?:\s+([\d.]+)px)?/);
+    v = m ? m[1] + ' ' + (m[2] || m[1]) : '';
+    el.setAttribute('data-gap', v);
+  }
+  return v;
+}
+function primeGaps() {
+  if (FLEX_GAP) return;
+  var all = document.getElementsByTagName('*');
+  for (var i = 0; i < all.length; i++) gapAttr(all[i]);
+}
 function gapOf(el, cs) {
   var g = parseFloat(cs.columnGap || cs.gridColumnGap || cs.gap);
   if (g > 0) return g;
-  var m = (el.getAttribute('style') || '').match(/(?:^|;)\s*gap:\s*([\d.]+)px/);
-  if (m) return +m[1];
+  var v = gapAttr(el);
+  if (v) { var two = v.split(' '); return cs.flexDirection.indexOf('column') === 0 ? +two[0] : +two[1]; }
   if (CLASS_GAPS[el.id]) return CLASS_GAPS[el.id];
   var cls = (el.className && el.className.split) ? el.className.split(' ') : [];
   for (var i = 0; i < cls.length; i++) if (CLASS_GAPS[cls[i]]) return CLASS_GAPS[cls[i]];
@@ -543,6 +560,8 @@ function gapOf(el, cs) {
 function fixGaps() {
   if (FLEX_GAP) return;
   var all = $('stage').getElementsByTagName('*');
+  // Read every gap before setting any margins: setting a child's margin rewrites its style text.
+  for (var j = 0; j < all.length; j++) gapAttr(all[j]);
   for (var i = 0; i < all.length; i++) {
     var el = all[i], cs = window.getComputedStyle(el);
     if (cs.display.indexOf('flex') === -1) continue;
@@ -578,7 +597,7 @@ function applyArt() {
   }
 }
 window.addEventListener('resize', fit);
-fit(); battery(); render(); applyArt(); load(); fixGaps();
+primeGaps(); fit(); battery(); render(); applyArt(); load(); fixGaps();
 setInterval(render, 15000);
 setInterval(load, REFRESH_MS);
 // Reload the whole page once a night to clear memory on the old tablet.

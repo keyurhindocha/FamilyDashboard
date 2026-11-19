@@ -74,6 +74,6 @@ Run **testNotes** to see what the board reads.
 
 ## Old iPads
 
-The board works in Safari on iOS 10.3 and newer. On older Safari it swaps flexbox spacing for margins and falls back to the iPad's own clock if time zones aren't supported. On a 4:3 screen it lays out at 1280×960 instead of leaving black bars.
+The board works in Safari on iOS 10.3 and newer (our iPad 4 is on 10.3.3). On older Safari it swaps flexbox spacing for margins, reading the gap values once at start-up because Safari 10 forgets them as soon as script touches an element's style. It also falls back to the iPad's own clock if time zones aren't supported. On a 4:3 screen it lays out at 1280×960 instead of leaving black bars.
 
-Kiosk setup on iPad: open the board in Safari → Share → **Add to Home Screen**, then Settings → Display → **Auto-Lock: Never**, and Settings → Accessibility → **Guided Access** on (triple-click the Home button inside the board to lock it there).
+Keep the board script to ES5 (`var`, `function`, no arrow functions, template strings, `let`/`const` or `fetch`) so Safari 10 can run it. iPad kiosk setup is in [tablet.md](tablet.md).
