@@ -11,7 +11,7 @@
 // "family" = a shared calendar for everyone. Icons: cat, car, candle (house),
 // sun, moon, fuel, bin, frost, dinner, cake. Colours are any CSS colour.
 var PEOPLE = {
-  owner:    { name: 'Keyur',    color: '#2E7D4F', tint: '#DCEBDF', icon: 'car' },
+  owner:    { name: 'Dad',      color: '#2E7D4F', tint: '#DCEBDF', icon: 'car' },
   commuter: { name: '',         color: '#B03A6F', tint: '#F3DDE7', icon: 'cat' },   // unused until COMMUTER_CALENDAR is set
   family:   { name: 'Family',   color: '#7A5C12', tint: '#EFE4C6', icon: 'candle' },
   birthday: { name: 'Birthdays', color: '#A8326E', tint: '#F6DCE8', icon: 'cake' }
