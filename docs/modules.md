@@ -46,7 +46,7 @@ Without a Todoist token, notes come from a Google Tasks list called **Notices** 
 
 ## Bins
 
-No accounts needed. Set `BIN_DAY`, the bins that take turns (`BIN_CYCLE`), a date when the first of them went out (`BIN_CYCLE_START`), and anything collected weekly (`BIN_EVERY_WEEK`). For bank-holiday changes add `BIN_MOVES: { '2026-12-25': '2026-12-27' }`.
+No accounts needed. Set `BIN_DAY`, the bins that take turns (`BIN_CYCLE`), a date when the first of them went out (`BIN_CYCLE_START`), and anything collected weekly (`BIN_EVERY_WEEK`). For holiday changes add `BIN_MOVES: { '2026-12-25': '2026-12-27' }`. For seasonal pickups such as yard waste, add them to `BIN_SEASONAL` with a start and end date. Use `''` in `BIN_CYCLE` for a week with nothing extra (e.g. garbage every other week).
 
 The board says "bins out tonight" from 5pm the evening before, and shows them on the morning of collection.
 

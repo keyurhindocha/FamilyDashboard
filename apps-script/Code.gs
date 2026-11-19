@@ -130,8 +130,16 @@ function binsFor_(dateStr) {
     main = cycle[((weeks % cycle.length) + cycle.length) % cycle.length];
   }
   var weekly = CONFIG.BIN_EVERY_WEEK || '';
-  var label = main && weekly ? main + ' & ' + weekly : (main || weekly);
-  if (!label) return null;
+  var items = [];
+  if (main) items.push(main);
+  if (weekly) items.push(weekly);
+  // Seasonal pickups (e.g. yard waste) between two dates, on the normal collection day.
+  var day = original || dateStr;
+  (CONFIG.BIN_SEASONAL || []).forEach(function (s) {
+    if (day >= s.from && day <= s.until) items.push(s.label);
+  });
+  if (!items.length) return null;
+  var label = items.length > 1 ? items.slice(0, -1).join(', ') + ' & ' + items[items.length - 1] : items[0];
   return { main: main, food: !!weekly, label: label.charAt(0).toUpperCase() + label.slice(1) };
 }
 

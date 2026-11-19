@@ -63,12 +63,16 @@ var CONFIG = {
   DAY_OFF_WORDS: ['holiday', 'day off', 'annual leave', 'off work', 'leave'],
 
   // ---- Bins. Example: rubbish and recycling alternate on Fridays, food waste every week.
-  // Peel Region: garbage and blue box alternate weeks, green bin every week.
-  // Set BIN_DAY and BIN_CYCLE_START from your Peel waste calendar (peelregion.ca/waste).
-  BIN_DAY: 0,                                 // collection weekday (Mon=1 ... Sun=7), 0 = off
-  BIN_CYCLE: ['Garbage', 'Blue box'],         // bins that take turns, in order
-  BIN_CYCLE_START: '2026-11-16',              // a collection day when the FIRST one went out
+  // Peel Region, from the Recollect schedule (peelregionon.recollect.net):
+  // Thursdays. Green bin every week, garbage every other week, yard waste in season.
+  BIN_DAY: 4,                                 // collection weekday (Mon=1 ... Sun=7), 0 = off
+  BIN_CYCLE: ['Garbage', ''],                 // bins that take turns, in order ('' = nothing extra that week)
+  BIN_CYCLE_START: '2026-11-12',              // a collection day when the FIRST one went out
   BIN_EVERY_WEEK: 'green bin',                // collected every week ('' if none)
+  BIN_SEASONAL: [                             // extra pickups between two dates (inclusive)
+    { label: 'yard waste', from: '2026-11-01', until: '2026-12-10' }
+    // add next spring's dates from the 2027 schedule
+  ],
   BIN_MOVES: {},                              // one-off changes: { '2026-12-25': '2026-12-27' }
 
   // ---- Dinners from the meal tracker app (Supabase). Script properties:
