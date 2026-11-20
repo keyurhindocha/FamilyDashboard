@@ -2,3 +2,6 @@
 Thumbs.db
 *.zip
 .env
+
+# clasp link to the private Apps Script project
+.clasp.json
