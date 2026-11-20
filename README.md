@@ -27,7 +27,7 @@
 | 🍛 **Dinners** | From the family **meal tracker**. Nothing planned tonight? It suggests a favourite you haven't had in a while: *"How about chole bhature? Last had 6 weeks ago."* |
 | 🏎️ **Formula 1** | Countdown to lights out, with qualifying and sprint times in Toronto time. |
 | 📝 **Notes** | A shared Todoist list anyone can add to from their phone. |
-| 🌙 **Night mode** | 23:00–06:30: a dim starry clock with tomorrow's essentials (bins, frost, first event, gas, birthdays). |
+| 🌙 **Night mode** | 23:00–06:30: a dim starry clock with tomorrow's essentials (bins, frost, first event, gas, birthdays). **Tap to peek** at the full board for a minute. |
 
 Every section is optional. Anything that isn't set up simply doesn't appear.
 

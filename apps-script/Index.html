@@ -34,6 +34,9 @@
   .wk .dn { margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px; font-style: italic; font-size: 17px; color: #6B5636; padding-left: 12px; max-width: 230px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wk .num { font-family: Cinzel, serif; font-size: 22px; font-weight: 700; }
   .hidden { display: none !important; }
+  #stage { cursor: pointer; }   /* iOS Safari only sends taps to elements that look clickable */
+  #peekNote { position: absolute; left: 32px; bottom: 28px; padding: 6px 18px; border-radius: 999px;
+              background: rgba(14,12,28,.85); border: 1px solid #4A4466; color: #C9B37E; font-size: 15px; white-space: nowrap; }
   #night { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; background: #0E0C1C; color: #A9A2C6; overflow: hidden; }
   .star { position: absolute; border-radius: 999px; animation: tw 6s ease-in-out infinite; }
   @keyframes tw { 0%, 100% { opacity: .25 } 50% { opacity: .85 } }
@@ -87,6 +90,8 @@
     <div id="nInfo" style="position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 36px; align-items: center; width: -webkit-max-content; width: max-content; max-width: 1120px; padding: 14px 32px; border: 1px solid #2E2A48; border-radius: 32px; font-size: 18px"></div>
     <span id="nBattery" style="position: absolute; right: 28px; bottom: 24px; font-size: 14px; color: #8C86B0"></span>
   </div>
+
+  <div id="peekNote" class="hidden"></div>
 </div>
 
 <script>
@@ -94,6 +99,7 @@ var BOARD_KEY = '<?= boardKey ?>';
 var API_URL = '';
 var TZ = 'America/Toronto';   // must match CONFIG.TIMEZONE in Config.gs
 var NIGHT_FROM = 23 * 60, NIGHT_TO = 6 * 60 + 30;   // night mode 23:00–06:30
+var PEEK_MS = 60000;                                // tap at night: show the day board for a minute
 var REFRESH_MS = 120000;
 
 // Background artwork (made with Higgsfield, see docs/design.md). Swap any of these for your own:
@@ -213,7 +219,10 @@ function parchBg() {
 function render() {
   var now = Date.now();
   var mins = minutesOfDay(now);
-  var night = mins >= NIGHT_FROM || mins < NIGHT_TO;
+  var nightHours = mins >= NIGHT_FROM || mins < NIGHT_TO;
+  var peeking = nightHours && now < peekUntil;
+  var night = nightHours && !peeking;
+  showPeekNote(peeking ? peekUntil - now : 0);
   $('day').className = night ? 'hidden' : '';
   $('night').className = night ? '' : 'hidden';
   var p = parts(now);
@@ -437,7 +446,7 @@ function renderNight(now, p) {
   $('nDate').textContent = (p.weekday + ' · ' + p.day + ' ' + p.month).toUpperCase();
   $('nClock').textContent = hm(now);
   $('nMoon').innerHTML = svg('moon', '#8C86B0', 20, 1.6) + '<span>' + moonPhase(now) + '</span>';
-  $('nBattery').textContent = BATTERY ? BATTERY + ' · wakes at 6:30' : 'Wakes at 6:30';
+  $('nBattery').textContent = 'Tap to peek · ' + (BATTERY ? BATTERY + ' · wakes at 6:30' : 'wakes at 6:30');
   var info = [];
   if (DATA && DATA.bins && (DATA.bins.tonight || (minutesOfDay(now) < NIGHT_TO && DATA.bins.today))) {
     var b = DATA.bins.tonight || DATA.bins.today;
@@ -584,6 +593,35 @@ function applyArt() {
 window.addEventListener('resize', fit);
 primeGaps(); fit(); battery(); render(); applyArt(); load(); fixGaps();
 setInterval(render, 15000);
+
+// ------------------------------------------------------------ peek at night
+// Tap during night mode to see the full board for PEEK_MS; tap again to dim early.
+var peekUntil = 0, peekTick = null, lastTap = 0;
+function showPeekNote(msLeft) {
+  var el = $('peekNote');
+  if (msLeft <= 0) { el.className = 'hidden'; return; }
+  var sec = Math.ceil(msLeft / 1000);
+  el.textContent = 'Night mode again in ' + Math.floor(sec / 60) + ':' + pad(sec % 60) + ' · tap to dim now';
+  el.className = '';
+}
+function setPeek(on) {
+  peekUntil = on ? Date.now() + PEEK_MS : 0;
+  clearInterval(peekTick); peekTick = null;
+  if (on) peekTick = setInterval(function () {
+    if (Date.now() >= peekUntil) setPeek(false); else showPeekNote(peekUntil - Date.now());
+  }, 1000);
+  render();
+}
+function onTap() {
+  var t = Date.now();
+  if (t - lastTap < 600) return;   // a touch also fires a click; count it once
+  lastTap = t;
+  var mins = minutesOfDay(t);
+  if (!(mins >= NIGHT_FROM || mins < NIGHT_TO)) return;   // daytime: taps do nothing
+  setPeek(t >= peekUntil);
+}
+$('stage').addEventListener('touchend', onTap);
+$('stage').addEventListener('click', onTap);
 setInterval(load, REFRESH_MS);
 // Reload the whole page once a night to clear memory on the old tablet.
 setInterval(function () { var m = minutesOfDay(Date.now()); if (m === 4 * 60) location.reload(); }, 60000);
