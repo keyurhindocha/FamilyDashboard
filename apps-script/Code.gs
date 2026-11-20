@@ -23,6 +23,14 @@ function doGet(e) {
   if (!key || !e || !e.parameter || e.parameter.k !== key) {
     return HtmlService.createHtmlOutput('Not found');
   }
+  // The countdowns settings page: <board link>&page=countdowns
+  if (e.parameter.page === 'countdowns') {
+    var c = HtmlService.createTemplateFromFile('Countdowns');
+    c.boardKey = key;
+    return c.evaluate()
+      .setTitle('Countdowns · Family board')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
   var t = HtmlService.createTemplateFromFile('Index');
   t.boardKey = key;
   return t.evaluate()
@@ -47,6 +55,7 @@ function getBoardData(key) {
   section_(out, 'notices', function () { return on('notices') ? cached_('notices', 300, getNotices_) : []; });
   section_(out, 'dinners', function () { return on('dinners') ? cached_('dinners', 600, getDinners_) : {}; });
   section_(out, 'birthdays', function () { return on('birthdays') ? cached_('bdays', 3600, getBirthdays_) : []; });
+  section_(out, 'countdowns', function () { return on('countdowns') ? upcomingCountdowns_(fmt_(now, 'yyyy-MM-dd')) : []; });
   section_(out, 'dinnerIdea', function () { return on('dinners') && CONFIG.MEAL_SUGGEST ? cached_('dinnerIdea', 21600, getDinnerIdea_) : null; });
   // Who appears in the legend: only people whose calendar is actually on the board.
   out.legend = [];
@@ -588,6 +597,62 @@ function todoistTasks_(projectName, propKey) {
   }
   return get('/tasks?project_id=' + encodeURIComponent(pid) + '&limit=50')
     .sort(function (x, y) { return (x.child_order || x.order || 0) - (y.child_order || y.order || 0); });
+}
+
+// ---------------------------------------------------------------- countdowns
+// Things the kids are looking forward to (next vacation, sleepover...). Kept as JSON
+// in the script property COUNTDOWNS and edited on the countdowns page.
+
+function readCountdowns_() {
+  try { return JSON.parse(prop_('COUNTDOWNS') || '[]'); } catch (e) { return []; }
+}
+
+/** Pure: countdowns from today on, soonest first. */
+function upcomingFrom_(list, todayStr) {
+  return list.filter(function (c) { return c.date >= todayStr; })
+    .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+}
+function upcomingCountdowns_(todayStr) { return upcomingFrom_(readCountdowns_(), todayStr); }
+
+/** Pure: check and tidy one countdown from the settings page. */
+function cleanCountdown_(c) {
+  c = c || {};
+  var title = String(c.title || '').trim().slice(0, 60);
+  var date = String(c.date || '').trim();
+  if (!title) throw new Error('Give it a name, e.g. "Sleepover at Maya\'s"');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Pick a date');
+  return {
+    id: String(c.id || Utilities.getUuid().slice(0, 8)),
+    title: title,
+    date: date,
+    emoji: String(c.emoji || '🎉').slice(0, 8),
+    who: String(c.who || '').trim().slice(0, 40)
+  };
+}
+
+/** Called by the countdowns page. Each one checks the board key. */
+function listCountdowns(key) {
+  if (key !== prop_('BOARD_KEY')) throw new Error('Not allowed');
+  return readCountdowns_().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+}
+function saveCountdown(key, item) {
+  if (key !== prop_('BOARD_KEY')) throw new Error('Not allowed');
+  var c = cleanCountdown_(item);
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var list = readCountdowns_().filter(function (x) { return x.id !== c.id; });
+    list.push(c);
+    setProp_('COUNTDOWNS', JSON.stringify(list));
+  } finally { lock.releaseLock(); }
+  return listCountdowns(key);
+}
+function deleteCountdown(key, id) {
+  if (key !== prop_('BOARD_KEY')) throw new Error('Not allowed');
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    setProp_('COUNTDOWNS', JSON.stringify(readCountdowns_().filter(function (x) { return x.id !== id; })));
+  } finally { lock.releaseLock(); }
+  return listCountdowns(key);
 }
 
 // ---------------------------------------------------------------- setup

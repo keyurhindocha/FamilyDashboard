@@ -29,7 +29,8 @@ var CONFIG = {
     gas: true,       // local gas price + tomorrow's prediction (Gas Wizard)
     notices: true,   // notes from Todoist or Google Tasks
     dinners: true,   // dinners from the meal tracker (Supabase), or Todoist
-    birthdays: true  // birthdays & anniversaries for the next two weeks
+    birthdays: true, // birthdays & anniversaries for the next two weeks
+    countdowns: true // "looking forward to" countdowns, set on the countdowns page (?page=countdowns)
   },
 
   // ---- Calendars. The owner's default calendar is always included.

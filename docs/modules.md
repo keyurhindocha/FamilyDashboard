@@ -54,6 +54,20 @@ The board says "bins out tonight" from 5pm the evening before, and shows them on
 
 No setup. Uses the free Jolpica F1 API. Turn it off with `MODULES.f1: false`.
 
+## Countdowns ("Looking forward to")
+
+Things the kids are excited about, such as the next vacation or a sleepover, shown as up to three tiles counting down the **sleeps**. On the day it says "Today!", and night mode says "One more sleep until …!" the night before. Past countdowns drop off the board by themselves.
+
+**Add and edit them on the countdowns page:** your board link with `&page=countdowns` on the end:
+
+```
+https://script.google.com/macros/s/…/exec?k=YOURBOARDKEY&page=countdowns
+```
+
+Bookmark it or add it to your phone's home screen. Pick a name, a date, who it's for (optional) and a picture. Countdowns are saved in the script property `COUNTDOWNS`, and the page only opens with the right board key.
+
+Config.gs: `MODULES.countdowns`.
+
 ## Birthdays and anniversaries
 
 **Config.gs:** `BIRTHDAY_CALENDAR` (name or ID), `BIRTHDAY_DAYS` (default 14).

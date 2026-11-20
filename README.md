@@ -21,6 +21,7 @@
 |---|---|
 | 🕰️ **Clock, date & weather** | Big serif clock, Mississauga weather, and a frost warning on cold mornings. |
 | 📅 **Today & the week ahead** | Pulled from the shared **Family** calendar (and a parent's own), colour-coded per person. |
+| 🎈 **Looking forward to** | Countdown tiles for the kids ("27 sleeps" to the Florida vacation), added from a phone-friendly settings page. |
 | 🎂 **Birthdays & anniversaries** | From the *Birthdays and Anniversaries* calendar, with ages worked out from the year: "Grandma's birthday · turns 78". |
 | 🗑️ **Bins** | Thursday pickups: green bin weekly, garbage and recycling on alternating weeks, yard waste in season. "Bins out tonight" from 5pm the night before. |
 | ⛽ **Gas prices** | Today's Mississauga average and **tomorrow's predicted price** from [Gas Wizard](https://gaswizard.ca), with plain advice: *"Up 3¢ tomorrow · fill up today"*. |
@@ -116,6 +117,7 @@ Everything is explained in [docs/modules.md](docs/modules.md).
 - [x] Gas prices with tomorrow's prediction
 - [x] Dinners and ideas from the meal tracker
 - [x] Old-iPad support and 4:3 layout
+- [x] "Looking forward to" countdowns with a settings page
 - [ ] Kids' chore chart
 - [ ] Photo slideshow from a Google Drive folder
 - [ ] Own name and colour for each family member
