@@ -328,7 +328,7 @@ function bdaysOn(iso) { return (DATA.birthdays || []).filter(function (b) { retu
 function bdayTitle(b) { return b.title; }
 function bdayYears(b) {
   if (!b.years) return '';
-  if (b.kind === 'birthday') return 'turns ' + b.years;
+  if (b.kind === 'birthday') return 'turns ' + b.years;   // milestones and anniversaries count years
   return b.years + (b.years === 1 ? ' year' : ' years');
 }
 

@@ -5,3 +5,5 @@ Thumbs.db
 
 # clasp link to the private Apps Script project
 .clasp.json
+# private overrides (pushed to Apps Script by clasp, never to GitHub)
+apps-script/Private.gs

@@ -472,7 +472,7 @@ function getNotices_() {
 /**
  * Birthdays and anniversaries for the next BIRTHDAY_DAYS days.
  * Titles look like "Jane Doe's birthday (1985) · Tag": the year in brackets
- * becomes an age ("turns 41") and the tag after " · " is dropped.
+ * becomes an age ("turns 41") or a count of years ("9 years") and the tag after " · " is dropped.
  */
 function getBirthdays_() {
   var cal = findCalendar_(CONFIG.BIRTHDAY_CALENDAR);
@@ -493,7 +493,8 @@ function tidyBirthday_(title, thisYear) {
   var years = null, m = t.match(/\s*\((\d{4})\)\s*$/);
   if (m) { years = thisYear - Number(m[1]); t = t.slice(0, m.index).trim(); }
   var lower = t.toLowerCase();
-  var kind = lower.indexOf('anniversary') !== -1 ? 'anniversary' : lower.indexOf('remembrance') !== -1 ? 'remembrance' : 'birthday';
+  var kind = lower.indexOf('birthday') !== -1 ? 'birthday' : lower.indexOf('anniversary') !== -1 ? 'anniversary' :
+             lower.indexOf('remembrance') !== -1 ? 'remembrance' : 'milestone';   // e.g. "Started at a new job (2017)"
   return { title: t, years: years > 0 ? years : null, kind: kind };
 }
 
